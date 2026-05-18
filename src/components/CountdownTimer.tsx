@@ -3,11 +3,13 @@ import { VOTING_WINDOW_HOURS } from "@/mock/proposals";
 
 export function CountdownTimer({ createdAt, compact = false }: { createdAt: number; compact?: boolean }) {
   const deadline = createdAt + VOTING_WINDOW_HOURS * 3_600_000;
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
+    setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+  if (now === null) return <span className="font-mono text-xs opacity-0">--</span>;
   const diff = Math.max(0, deadline - now);
   const h = Math.floor(diff / 3_600_000);
   const m = Math.floor((diff % 3_600_000) / 60_000);
