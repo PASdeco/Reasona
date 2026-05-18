@@ -12,7 +12,7 @@ export const Route = createFileRoute("/admin")({
 const cats: Category[] = ["Governance", "Treasury", "Community", "Technical", "Partnerships", "Protocol Upgrade"];
 
 function Admin() {
-  const { canCreate, isOwner, wallet, connect, proposals, createProposal, closeProposal, archiveProposal, whitelist, addWhitelist, removeWhitelist } =
+  const { canCreate, isOwner, wallet, connect, proposals, createProposal, closeProposal, archiveProposal, unarchiveProposal, whitelist, addWhitelist, removeWhitelist } =
     useApp();
   const navigate = useNavigate();
 
