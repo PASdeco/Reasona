@@ -15,6 +15,7 @@ interface AppState {
   createProposal: (p: { title: string; description: string; category: Category }) => string;
   closeProposal: (id: string) => void;
   archiveProposal: (id: string) => void;
+  unarchiveProposal: (id: string) => void;
   submitVote: (id: string, choice: VoteChoice, reasoning: string) => void;
   isOwner: boolean;
   isCreator: boolean;
