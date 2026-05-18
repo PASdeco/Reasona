@@ -5,7 +5,6 @@ import { ProposalCard } from "@/components/ProposalCard";
 import type { Category, ProposalStatus } from "@/mock/proposals";
 
 const categories: ("All" | Category)[] = ["All", "Governance", "Treasury", "Community", "Technical", "Partnerships", "Protocol Upgrade"];
-const statuses: ("All" | ProposalStatus)[] = ["All", "ACTIVE", "CLOSED", "ARCHIVED"];
 
 export const Route = createFileRoute("/explore")({
   head: () => ({ meta: [{ title: "Explore Proposals — Reasona" }] }),
@@ -13,12 +12,18 @@ export const Route = createFileRoute("/explore")({
 });
 
 function Explore() {
-  const { proposals } = useApp();
+  const { proposals, canCreate } = useApp();
+  const statuses: ("All" | ProposalStatus)[] = canCreate
+    ? ["All", "ACTIVE", "CLOSED", "ARCHIVED"]
+    : ["All", "ACTIVE", "CLOSED"];
   const [cat, setCat] = useState<(typeof categories)[number]>("All");
-  const [status, setStatus] = useState<(typeof statuses)[number]>("All");
+  const [status, setStatus] = useState<("All" | ProposalStatus)>("All");
 
   const list = proposals.filter(
-    (p) => (cat === "All" || p.category === cat) && (status === "All" || p.status === status)
+    (p) =>
+      (cat === "All" || p.category === cat) &&
+      (status === "All" || p.status === status) &&
+      (canCreate || p.status !== "ARCHIVED")
   );
 
   return (

@@ -2,8 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useApp } from "@/store/app";
 import { ProposalCard } from "@/components/ProposalCard";
-import { BubbleMap } from "@/components/BubbleMap";
-import { initialProposals } from "@/mock/proposals";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,7 +16,6 @@ export const Route = createFileRoute("/")({
 function Landing() {
   const { proposals, connect, wallet } = useApp();
   const active = proposals.filter((p) => p.status === "ACTIVE").slice(0, 2);
-  const showcaseClusters = initialProposals[0].clusters;
 
   return (
     <div className="relative overflow-hidden">
@@ -68,22 +65,6 @@ function Landing() {
         </motion.div>
       </section>
 
-      {/* Bubble showcase */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-28">
-        <div className="grid md:grid-cols-2 gap-10 items-center">
-          <div>
-            <div className="text-xs uppercase tracking-widest text-primary mb-3">Bubble Intelligence</div>
-            <h2 className="text-4xl font-bold mb-4">See How Communities Think</h2>
-            <p className="text-muted-foreground">
-              Every vote comes with reasoning. Our AI clusters similar opinions into living visual intelligence maps —
-              revealing the structure of collective thought in real time.
-            </p>
-          </div>
-          <div className="glass rounded-2xl p-3">
-            <BubbleMap clusters={showcaseClusters} height={360} />
-          </div>
-        </div>
-      </section>
 
       {/* How it works */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-28">
