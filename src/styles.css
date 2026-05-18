@@ -123,7 +123,7 @@
     box-shadow: 0 0 40px -8px rgba(180, 30, 0, 0.5);
   }
   .text-gradient {
-    background: linear-gradient(135deg, #fff 30%, oklch(0.7 0.2 25));
+    background: linear-gradient(135deg, var(--foreground) 30%, oklch(0.6 0.22 25));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
