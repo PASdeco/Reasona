@@ -157,8 +157,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
         width={width}
         height={height}
         style={{
-          background:
-            "radial-gradient(ellipse at center, rgba(168,85,247,0.08), transparent 70%), #080810",
+          background: "transparent",
           borderRadius: 16,
         }}
       />

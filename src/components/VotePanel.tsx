@@ -9,8 +9,6 @@ const choices: { v: VoteChoice; color: string; ring: string }[] = [
   { v: "Abstain", color: "text-zinc-300", ring: "shadow-zinc-400/30 border-zinc-400/50 bg-zinc-400/10" },
 ];
 
-const MIN_CHARS = 30;
-
 export function VotePanel({ proposal }: { proposal: Proposal }) {
   const { wallet, submitVote, connect } = useApp();
   const [choice, setChoice] = useState<VoteChoice | null>(null);
@@ -18,7 +16,7 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
   const [submitting, setSubmitting] = useState(false);
 
   const frozen = !!proposal.myVote || proposal.status !== "ACTIVE";
-  const valid = useMemo(() => choice && reasoning.trim().length >= MIN_CHARS, [choice, reasoning]);
+  const valid = useMemo(() => choice && reasoning.trim().length > 0, [choice, reasoning]);
 
   const onSubmit = async () => {
     if (!valid || !choice) return;
