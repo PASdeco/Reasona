@@ -59,6 +59,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setProposals((p) => p.map((x) => (x.id === id ? { ...x, status: "CLOSED" } : x)));
   const archiveProposal = (id: string) =>
     setProposals((p) => p.map((x) => (x.id === id ? { ...x, status: "ARCHIVED" } : x)));
+  const unarchiveProposal = (id: string) =>
+    setProposals((p) => p.map((x) => {
+      if (x.id !== id) return x;
+      const expired = Date.now() - x.createdAt > VOTING_WINDOW_HOURS * 3600 * 1000;
+      return { ...x, status: expired ? "CLOSED" : "ACTIVE" };
+    }));
 
   const submitVote: AppState["submitVote"] = (id, choice, reasoning) => {
     setProposals((prev) =>
