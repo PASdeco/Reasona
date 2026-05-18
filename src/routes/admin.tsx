@@ -36,6 +36,15 @@ function Admin() {
     );
   }
 
+  if (!canCreate) {
+    return (
+      <div className="max-w-md mx-auto text-center py-32">
+        <h1 className="text-2xl font-semibold mb-3">Access Restricted</h1>
+        <p className="text-muted-foreground">Only the owner and whitelisted creators can access the admin panel.</p>
+      </div>
+    );
+  }
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !desc.trim()) return;

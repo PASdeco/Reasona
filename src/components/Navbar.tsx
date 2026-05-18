@@ -1,17 +1,21 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { WalletConnect } from "./WalletConnect";
-
-const links = [
-  { to: "/", label: "Home" },
-  { to: "/explore", label: "Explore" },
-  { to: "/analytics", label: "Analytics" },
-  { to: "/admin", label: "Admin" },
-] as const;
+import { ThemeToggle } from "./ThemeToggle";
+import { useApp } from "@/store/app";
 
 export function Navbar() {
   const loc = useLocation();
+  const { canCreate } = useApp();
+
+  const links = [
+    { to: "/", label: "Home" },
+    { to: "/explore", label: "Explore" },
+    { to: "/analytics", label: "Analytics" },
+    ...(canCreate ? [{ to: "/admin", label: "Admin" }] : []),
+  ] as const;
+
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/60 border-b border-white/5">
+    <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/60 border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 font-semibold">
           <div className="w-7 h-7 rounded-lg bg-primary-gradient shadow-[0_0_20px_-2px] shadow-primary/50" />
@@ -33,7 +37,10 @@ export function Navbar() {
             );
           })}
         </nav>
-        <WalletConnect />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <WalletConnect />
+        </div>
       </div>
     </header>
   );
