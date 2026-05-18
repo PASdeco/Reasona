@@ -74,14 +74,11 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
       <div>
         <div className="flex justify-between items-center mb-2">
           <div className="text-xs uppercase tracking-widest text-muted-foreground">Reasoning</div>
-          <div className={`text-[11px] font-mono ${reasoning.length >= MIN_CHARS ? "text-emerald-300" : "text-muted-foreground"}`}>
-            {reasoning.length}/{MIN_CHARS}
-          </div>
+          <div className="text-[11px] font-mono text-muted-foreground">{reasoning.length} chars</div>
         </div>
         <textarea
           value={reasoning}
           onChange={(e) => setReasoning(e.target.value)}
-          placeholder="Explain your reasoning... (required)"
           rows={4}
           className="w-full rounded-lg bg-white/[0.02] border border-white/10 px-3 py-2 text-sm resize-none focus:outline-none focus:border-primary/50"
         />
