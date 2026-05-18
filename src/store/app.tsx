@@ -111,7 +111,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({
       role, setRole, wallet, connect, disconnect,
       proposals, whitelist, addWhitelist, removeWhitelist,
-      createProposal, closeProposal, archiveProposal, submitVote,
+      createProposal, closeProposal, archiveProposal, unarchiveProposal, submitVote,
       isOwner, isCreator, canCreate,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
