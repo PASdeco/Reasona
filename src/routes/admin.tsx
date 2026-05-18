@@ -12,7 +12,7 @@ export const Route = createFileRoute("/admin")({
 const cats: Category[] = ["Governance", "Treasury", "Community", "Technical", "Partnerships", "Protocol Upgrade"];
 
 function Admin() {
-  const { canCreate, isOwner, wallet, connect, proposals, createProposal, closeProposal, archiveProposal, whitelist, addWhitelist, removeWhitelist } =
+  const { canCreate, isOwner, wallet, connect, proposals, createProposal, closeProposal, archiveProposal, unarchiveProposal, whitelist, addWhitelist, removeWhitelist } =
     useApp();
   const navigate = useNavigate();
 
@@ -126,8 +126,10 @@ function Admin() {
                 {p.status === "ACTIVE" && (
                   <button onClick={() => closeProposal(p.id)} className="text-xs px-2 py-1 rounded border border-white/10 hover:border-amber-500/40 hover:text-amber-300">Close</button>
                 )}
-                {p.status !== "ARCHIVED" && (
+                {p.status !== "ARCHIVED" ? (
                   <button onClick={() => archiveProposal(p.id)} className="text-xs px-2 py-1 rounded border border-white/10 hover:border-red-500/40 hover:text-red-300">Archive</button>
+                ) : (
+                  <button onClick={() => unarchiveProposal(p.id)} className="text-xs px-2 py-1 rounded border border-white/10 hover:border-emerald-500/40 hover:text-emerald-300">Unarchive</button>
                 )}
               </li>
             ))}

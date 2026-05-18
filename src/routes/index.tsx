@@ -27,13 +27,6 @@ function Landing() {
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-28 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-xs text-muted-foreground mb-8"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          New · AI Reasoning Clustering Engine v2
-        </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
           className="text-5xl sm:text-7xl font-bold tracking-tight leading-[1.05]"

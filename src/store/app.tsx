@@ -15,6 +15,7 @@ interface AppState {
   createProposal: (p: { title: string; description: string; category: Category }) => string;
   closeProposal: (id: string) => void;
   archiveProposal: (id: string) => void;
+  unarchiveProposal: (id: string) => void;
   submitVote: (id: string, choice: VoteChoice, reasoning: string) => void;
   isOwner: boolean;
   isCreator: boolean;
@@ -58,6 +59,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setProposals((p) => p.map((x) => (x.id === id ? { ...x, status: "CLOSED" } : x)));
   const archiveProposal = (id: string) =>
     setProposals((p) => p.map((x) => (x.id === id ? { ...x, status: "ARCHIVED" } : x)));
+  const unarchiveProposal = (id: string) =>
+    setProposals((p) => p.map((x) => {
+      if (x.id !== id) return x;
+      const expired = Date.now() - x.createdAt > VOTING_WINDOW_HOURS * 3600 * 1000;
+      return { ...x, status: expired ? "CLOSED" : "ACTIVE" };
+    }));
 
   const submitVote: AppState["submitVote"] = (id, choice, reasoning) => {
     setProposals((prev) =>
@@ -104,7 +111,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({
       role, setRole, wallet, connect, disconnect,
       proposals, whitelist, addWhitelist, removeWhitelist,
-      createProposal, closeProposal, archiveProposal, submitVote,
+      createProposal, closeProposal, archiveProposal, unarchiveProposal, submitVote,
       isOwner, isCreator, canCreate,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
