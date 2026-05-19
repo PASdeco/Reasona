@@ -1,8 +1,8 @@
 import { useApp } from "@/store/app";
-import { shortAddr } from "@/mock/wallets";
+import { shortAddr } from "@/lib/reasona";
 
 export function WalletConnect() {
-  const { wallet, connect, disconnect } = useApp();
+  const { wallet, connect, disconnect, isConnecting, isWalletPickerOpen } = useApp();
   if (wallet) {
     return (
       <button
@@ -17,10 +17,10 @@ export function WalletConnect() {
   }
   return (
     <button
-      onClick={connect}
+      onClick={() => void connect()}
       className="px-4 py-2 rounded-lg text-sm font-medium border border-primary/40 hover:bg-primary/20 transition-all hover:shadow-[0_0_30px_-5px] hover:shadow-primary/50"
     >
-      Connect Wallet
+      {isConnecting || isWalletPickerOpen ? "Connecting..." : "Connect Wallet"}
     </button>
   );
 }

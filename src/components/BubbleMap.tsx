@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import * as d3 from "d3";
-import type { Cluster } from "@/mock/proposals";
+import type { Cluster } from "@/lib/reasona";
 
 const sideColor = {
   for: "#a855f7",
@@ -37,6 +37,10 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
 
   useEffect(() => {
     if (!ref.current) return;
+    if (clusters.length === 0) {
+      d3.select(ref.current).selectAll("*").remove();
+      return;
+    }
     const svg = d3.select(ref.current);
     svg.selectAll("*").remove();
 

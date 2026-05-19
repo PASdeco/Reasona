@@ -11,7 +11,8 @@ import {
 import appCss from "../styles.css?url";
 import { AppProvider } from "@/store/app";
 import { Navbar } from "@/components/Navbar";
-import { RoleSwitcher } from "@/components/RoleSwitcher";
+import { useApp } from "@/store/app";
+import { WalletPicker } from "@/components/WalletPicker";
 
 function NotFoundComponent() {
   return (
@@ -86,14 +87,26 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
-        <div className="min-h-screen flex flex-col">
-          <Navbar />
-          <main className="flex-1">
-            <Outlet />
-          </main>
-          <RoleSwitcher />
-        </div>
+        <RootApp />
       </AppProvider>
     </QueryClientProvider>
+  );
+}
+
+function RootApp() {
+  const { contractReady } = useApp();
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      {!contractReady && (
+        <div className="border-b border-amber-500/20 bg-amber-500/5 px-4 py-2 text-center text-xs text-amber-100">
+          Deploy `contracts/reasona.py` and set `VITE_REASONA_CONTRACT_ADDRESS` to activate live contract data.
+        </div>
+      )}
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <WalletPicker />
+    </div>
   );
 }

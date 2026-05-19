@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useApp } from "@/store/app";
 import { ProposalCard } from "@/components/ProposalCard";
-import type { Category, ProposalStatus } from "@/mock/proposals";
+import type { Category, ProposalStatus } from "@/lib/reasona";
 
 const categories: ("All" | Category)[] = ["All", "Governance", "Treasury", "Community", "Technical", "Partnerships", "Protocol Upgrade"];
 

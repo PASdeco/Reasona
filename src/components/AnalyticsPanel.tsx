@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { Proposal } from "@/mock/proposals";
+import type { Proposal } from "@/lib/reasona";
 
 function confidence(p: Proposal) {
   const total = p.yes + p.no + p.abstain || 1;

@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { VOTING_WINDOW_HOURS } from "@/mock/proposals";
 
-export function CountdownTimer({ createdAt, compact = false }: { createdAt: number; compact?: boolean }) {
-  const deadline = createdAt + VOTING_WINDOW_HOURS * 3_600_000;
+export function CountdownTimer({ deadline, compact = false }: { deadline: number; compact?: boolean }) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     setNow(Date.now());

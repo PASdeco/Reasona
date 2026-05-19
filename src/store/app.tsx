@@ -1,130 +1,508 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { initialProposals, type Proposal, type VoteChoice, VOTING_WINDOW_HOURS, type Category } from "@/mock/proposals";
-import { MOCK_WALLETS, initialWhitelist, type Role } from "@/mock/wallets";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  addCreator,
+  archiveProposal as archiveProposalOnChain,
+  closeProposal as closeProposalOnChain,
+  createProposal as createProposalOnChain,
+  getOwner,
+  getProposal,
+  getProposals,
+  getMyVote,
+  getWhitelist,
+  HAS_CONTRACT_ADDRESS,
+  isWhitelisted,
+  OWNER_ADDRESS,
+  removeCreator,
+  submitVote as submitVoteOnChain,
+  unarchiveProposal as unarchiveProposalOnChain,
+} from "@/lib/genlayer";
+import {
+  discoverInjectedWallets,
+  requestAccounts,
+  type InjectedWalletProvider,
+  type WalletOption,
+} from "@/lib/wallets";
+import type { Category, Proposal, VoteChoice } from "@/lib/reasona";
+
+type WalletAddress = `0x${string}`;
 
 interface AppState {
-  role: Role;
-  setRole: (r: Role) => void;
   wallet: string | null;
-  connect: () => void;
+  walletOptions: WalletOption[];
+  connect: () => Promise<void>;
+  connectWallet: (walletId: string) => Promise<void>;
   disconnect: () => void;
   proposals: Proposal[];
   whitelist: string[];
-  addWhitelist: (a: string) => void;
-  removeWhitelist: (a: string) => void;
-  createProposal: (p: { title: string; description: string; category: Category }) => string;
-  closeProposal: (id: string) => void;
-  archiveProposal: (id: string) => void;
-  unarchiveProposal: (id: string) => void;
-  submitVote: (id: string, choice: VoteChoice, reasoning: string) => void;
+  addWhitelist: (address: string) => Promise<void>;
+  removeWhitelist: (address: string) => Promise<void>;
+  createProposal: (proposal: { title: string; description: string; category: Category }) => Promise<string | undefined>;
+  closeProposal: (id: string) => Promise<void>;
+  archiveProposal: (id: string) => Promise<void>;
+  unarchiveProposal: (id: string) => Promise<void>;
+  submitVote: (id: string, choice: VoteChoice, reasoning: string) => Promise<void>;
   isOwner: boolean;
   isCreator: boolean;
   canCreate: boolean;
+  isConnecting: boolean;
+  isSyncing: boolean;
+  error: string | null;
+  contractReady: boolean;
+  refresh: () => Promise<void>;
+  isWalletPickerOpen: boolean;
+  openWalletPicker: () => Promise<void>;
+  closeWalletPicker: () => void;
 }
 
 const Ctx = createContext<AppState | null>(null);
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<Role>("Community");
-  const [wallet, setWallet] = useState<string | null>(null);
-  const [proposals, setProposals] = useState<Proposal[]>(initialProposals);
-  const [whitelist, setWhitelist] = useState<string[]>(initialWhitelist);
+function normalizeAddress(address: string) {
+  return address.toLowerCase();
+}
 
-  const setRole = (r: Role) => {
-    setRoleState(r);
-    if (wallet) setWallet(MOCK_WALLETS[r]);
-  };
-  const connect = () => setWallet(MOCK_WALLETS[role]);
-  const disconnect = () => setWallet(null);
+function logApp(step: string, payload?: unknown) {
+  if (payload === undefined) {
+    console.info(`[Reasona][App] ${step}`);
+    return;
+  }
+  console.info(`[Reasona][App] ${step}`, payload);
+}
 
-  const isOwner = wallet === MOCK_WALLETS.Owner;
-  const isCreator = !!wallet && whitelist.includes(wallet);
-  const canCreate = isOwner || isCreator;
+function logAppError(step: string, payload?: unknown) {
+  if (payload === undefined) {
+    console.error(`[Reasona][App] ${step}`);
+    return;
+  }
+  console.error(`[Reasona][App] ${step}`, payload);
+}
 
-  const createProposal: AppState["createProposal"] = ({ title, description, category }) => {
-    const id = Date.now().toString();
-    const p: Proposal = {
-      id, title, description, category,
-      status: "ACTIVE",
-      creator: wallet ?? MOCK_WALLETS.Owner,
-      createdAt: Date.now(),
-      yes: 0, no: 0, abstain: 0,
-      clusters: [],
-    };
-    setProposals((prev) => [p, ...prev]);
-    return id;
-  };
+async function hydrateProposals(wallet: string | null) {
+  const proposals = await getProposals();
+  if (!wallet) return proposals;
 
-  const closeProposal = (id: string) =>
-    setProposals((p) => p.map((x) => (x.id === id ? { ...x, status: "CLOSED" } : x)));
-  const archiveProposal = (id: string) =>
-    setProposals((p) => p.map((x) => (x.id === id ? { ...x, status: "ARCHIVED" } : x)));
-  const unarchiveProposal = (id: string) =>
-    setProposals((p) => p.map((x) => {
-      if (x.id !== id) return x;
-      const expired = Date.now() - x.createdAt > VOTING_WINDOW_HOURS * 3600 * 1000;
-      return { ...x, status: expired ? "CLOSED" : "ACTIVE" };
-    }));
+  const votes = await Promise.all(
+    proposals.map(async (proposal) => {
+      const myVote = await getMyVote(proposal.id, wallet);
+      return { proposalId: proposal.id, myVote };
+    }),
+  );
 
-  const submitVote: AppState["submitVote"] = (id, choice, reasoning) => {
-    setProposals((prev) =>
-      prev.map((p) => {
-        if (p.id !== id) return p;
-        const side = choice === "Yes" ? "for" : choice === "No" ? "against" : "neutral";
-        // assign to nearest cluster by side, or create new
-        const clusters = [...p.clusters];
-        const matchIdx = clusters.findIndex((c) => c.side === side);
-        const addr = wallet ?? MOCK_WALLETS.Community;
-        if (matchIdx >= 0) {
-          clusters[matchIdx] = {
-            ...clusters[matchIdx],
-            members: clusters[matchIdx].members + 1,
-            entries: [...clusters[matchIdx].entries, { address: addr, reasoning }],
-          };
-        } else {
-          clusters.push({
-            id: `N${clusters.length + 1}`,
-            label: reasoning.slice(0, 80),
-            side,
-            members: 1,
-            entries: [{ address: addr, reasoning }],
-          });
+  const voteMap = new Map(votes.map((entry) => [entry.proposalId, entry.myVote]));
+  return proposals.map((proposal) => {
+    const myVote = voteMap.get(proposal.id);
+    return myVote
+      ? {
+          ...proposal,
+          myVote: {
+            choice: myVote.vote,
+            reasoning: myVote.reasoning,
+          },
         }
-        return {
-          ...p,
-          yes: p.yes + (choice === "Yes" ? 1 : 0),
-          no: p.no + (choice === "No" ? 1 : 0),
-          abstain: p.abstain + (choice === "Abstain" ? 1 : 0),
-          clusters,
-          myVote: { choice, reasoning },
-        };
-      })
-    );
-  };
+      : proposal;
+  });
+}
 
-  const addWhitelist = (a: string) =>
-    setWhitelist((w) => (w.includes(a) ? w : [...w, a]));
-  const removeWhitelist = (a: string) =>
-    setWhitelist((w) => (a === MOCK_WALLETS.Owner ? w : w.filter((x) => x !== a)));
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [wallet, setWallet] = useState<string | null>(null);
+  const [walletOptions, setWalletOptions] = useState<WalletOption[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<InjectedWalletProvider | null>(null);
+  const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [whitelist, setWhitelist] = useState<string[]>([]);
+  const [owner, setOwner] = useState(OWNER_ADDRESS.toLowerCase());
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadWalletOptions = useCallback(async () => {
+    const options = await discoverInjectedWallets();
+    setWalletOptions(options);
+    return options;
+  }, []);
+
+  const refresh = useCallback(async () => {
+    if (!HAS_CONTRACT_ADDRESS) {
+      setProposals([]);
+      setWhitelist([]);
+      setOwner(OWNER_ADDRESS.toLowerCase());
+      setError("Set VITE_REASONA_CONTRACT_ADDRESS to your deployed Reasona contract to enable live data.");
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const [nextOwner, nextWhitelist, nextProposals] = await Promise.all([
+        getOwner(),
+        getWhitelist(),
+        hydrateProposals(wallet),
+      ]);
+      setOwner(nextOwner);
+      setWhitelist(nextWhitelist);
+      setProposals(nextProposals);
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to sync Reasona with GenLayer.";
+      setError(message);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [wallet]);
+
+  useEffect(() => {
+    void loadWalletOptions();
+  }, [loadWalletOptions]);
+
+  const connectWalletInternal = useCallback(async (option: WalletOption) => {
+    logApp("Connecting injected wallet", {
+      walletId: option.id,
+      walletName: option.name,
+      provider: {
+        isMetaMask: !!option.provider.isMetaMask,
+        isRabby: !!option.provider.isRabby,
+        isZerion: !!option.provider.isZerion,
+      },
+    });
+    const account = await requestAccounts(option.provider, "eth_requestAccounts");
+    if (!account) {
+      throw new Error("Wallet connection was cancelled.");
+    }
+    logApp("Wallet connected", {
+      walletId: option.id,
+      account,
+    });
+    setSelectedProvider(option.provider);
+    setWallet(normalizeAddress(account));
+    setIsWalletPickerOpen(false);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("reasona:last-wallet-id", option.id);
+    }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void loadWalletOptions()
+      .then(async (options) => {
+        if (!mounted || options.length === 0) return;
+        const restoredId = typeof window !== "undefined" ? window.localStorage.getItem("reasona:last-wallet-id") : null;
+        const preferred = (restoredId ? options.find((option) => option.id === restoredId) : undefined) ?? options[0];
+        if (!preferred) return;
+        const account = await requestAccounts(preferred.provider, "eth_accounts");
+        if (!mounted || !account) return;
+        logApp("Restored wallet session", {
+          walletId: preferred.id,
+          account,
+        });
+        setSelectedProvider(preferred.provider);
+        setWallet(normalizeAddress(account));
+      })
+      .catch(() => {
+        // restore best effort
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [connectWalletInternal, loadWalletOptions]);
+
+  useEffect(() => {
+    const provider = selectedProvider;
+    if (!provider?.on) return;
+
+    const handleAccountsChanged = (accounts: unknown) => {
+      const next =
+        Array.isArray(accounts) && typeof accounts[0] === "string" ? normalizeAddress(accounts[0]) : null;
+      setWallet(next);
+    };
+
+    provider.on("accountsChanged", handleAccountsChanged);
+    return () => {
+      provider.removeListener?.("accountsChanged", handleAccountsChanged);
+    };
+  }, [selectedProvider]);
+
+  useEffect(() => {
+    void refresh();
+  }, [wallet, refresh]);
+
+  const openWalletPicker = useCallback(async () => {
+    const options = await loadWalletOptions();
+    if (options.length === 0) {
+      throw new Error("No browser wallet was found. Install MetaMask, Rabby, Zerion, or another injected wallet.");
+    }
+    if (options.length === 1) {
+      await connectWalletInternal(options[0]);
+      return;
+    }
+    setIsWalletPickerOpen(true);
+  }, [connectWalletInternal, loadWalletOptions]);
+
+  const closeWalletPicker = useCallback(() => {
+    setIsWalletPickerOpen(false);
+  }, []);
+
+  const connectWallet = useCallback<AppState["connectWallet"]>(
+    async (walletId) => {
+      setIsConnecting(true);
+      try {
+        const options = walletOptions.length > 0 ? walletOptions : await loadWalletOptions();
+        const option = options.find((entry) => entry.id === walletId);
+        if (!option) {
+          throw new Error("Selected wallet is no longer available.");
+        }
+        await connectWalletInternal(option);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to connect wallet.");
+        throw err;
+      } finally {
+        setIsConnecting(false);
+      }
+    },
+    [connectWalletInternal, loadWalletOptions, walletOptions],
+  );
+
+  const connect = useCallback(async () => {
+    setIsConnecting(true);
+    try {
+      const options = walletOptions.length > 0 ? walletOptions : await loadWalletOptions();
+      if (options.length === 0) {
+        throw new Error("No browser wallet was found. Install MetaMask, Rabby, Zerion, or another injected wallet.");
+      }
+      if (options.length === 1) {
+        await connectWalletInternal(options[0]);
+      } else {
+        setIsWalletPickerOpen(true);
+      }
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to connect wallet.");
+      throw err;
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [connectWalletInternal, loadWalletOptions, walletOptions]);
+
+  const disconnect = useCallback(() => {
+    setWallet(null);
+    setSelectedProvider(null);
+  }, []);
+
+  const runWrite = useCallback(async <T,>(action: () => Promise<T>) => {
+    try {
+      setError(null);
+      return await action();
+    } catch (err) {
+      logAppError("Frontend write action failed", err);
+      setError(err instanceof Error ? err.message : "Transaction failed.");
+      throw err;
+    }
+  }, []);
+
+  const withWallet = useCallback(
+    async <T,>(action: (address: WalletAddress, provider: InjectedWalletProvider | null) => Promise<T>) => {
+      if (!wallet) {
+        throw new Error("Connect a wallet first.");
+      }
+      logApp("Using connected wallet for transaction", {
+        wallet,
+        providerSelected: !!selectedProvider,
+      });
+      return action(wallet as WalletAddress, selectedProvider);
+    },
+    [selectedProvider, wallet],
+  );
+
+  const createProposal = useCallback<AppState["createProposal"]>(
+    async ({ title, description, category }) => {
+      logApp("create_proposal requested", {
+        wallet,
+        isOwner: wallet ? normalizeAddress(wallet) === owner : false,
+        isWhitelisted: wallet ? whitelist.includes(normalizeAddress(wallet)) : false,
+        contractReady: HAS_CONTRACT_ADDRESS,
+        category,
+        titleLength: title.length,
+        descriptionLength: description.length,
+      });
+      await runWrite(() =>
+        withWallet((address, provider) => createProposalOnChain(address, title, description, category, provider)),
+      );
+      await refresh();
+      const latest = await getProposals();
+      const created = latest.find(
+        (proposal) =>
+          proposal.title === title &&
+          proposal.description === description &&
+          proposal.creator === wallet,
+      );
+      return created?.id;
+    },
+    [owner, refresh, runWrite, wallet, whitelist, withWallet],
+  );
+
+  const closeProposal = useCallback<AppState["closeProposal"]>(
+    async (id) => {
+      await runWrite(() =>
+        withWallet((address, provider) => closeProposalOnChain(address, id, provider)),
+      );
+      await refresh();
+    },
+    [refresh, runWrite, withWallet],
+  );
+
+  const archiveProposal = useCallback<AppState["archiveProposal"]>(
+    async (id) => {
+      await runWrite(() =>
+        withWallet((address, provider) => archiveProposalOnChain(address, id, provider)),
+      );
+      await refresh();
+    },
+    [refresh, runWrite, withWallet],
+  );
+
+  const unarchiveProposal = useCallback<AppState["unarchiveProposal"]>(
+    async (id) => {
+      await runWrite(() =>
+        withWallet((address, provider) => unarchiveProposalOnChain(address, id, provider)),
+      );
+      await refresh();
+    },
+    [refresh, runWrite, withWallet],
+  );
+
+  const submitVote = useCallback<AppState["submitVote"]>(
+    async (id, choice, reasoning) => {
+      logApp("submit_vote requested", {
+        wallet,
+        proposalId: id,
+        choice,
+        reasoningLength: reasoning.length,
+      });
+      await runWrite(() =>
+        withWallet((address, provider) => submitVoteOnChain(address, id, choice, reasoning, provider)),
+      );
+      const latest = await getProposal(id);
+      if (latest) {
+        setProposals((current) =>
+          current.map((proposal) =>
+            proposal.id === id ? { ...latest, myVote: { choice, reasoning } } : proposal,
+          ),
+        );
+      }
+      await refresh();
+    },
+    [refresh, runWrite, withWallet],
+  );
+
+  const addWhitelist = useCallback<AppState["addWhitelist"]>(
+    async (address) => {
+      const target = normalizeAddress(address);
+      logApp("add_creator requested", {
+        wallet,
+        target,
+        isOwner: wallet ? normalizeAddress(wallet) === owner : false,
+      });
+      await runWrite(() =>
+        withWallet((caller, provider) => addCreator(caller, target, provider)),
+      );
+      await refresh();
+    },
+    [owner, refresh, runWrite, wallet, withWallet],
+  );
+
+  const removeWhitelist = useCallback<AppState["removeWhitelist"]>(
+    async (address) => {
+      const target = normalizeAddress(address);
+      logApp("remove_creator requested", {
+        wallet,
+        target,
+        isOwner: wallet ? normalizeAddress(wallet) === owner : false,
+      });
+      await runWrite(() =>
+        withWallet((caller, provider) => removeCreator(caller, target, provider)),
+      );
+      await refresh();
+    },
+    [owner, refresh, runWrite, wallet, withWallet],
+  );
+
+  const walletLower = wallet ? normalizeAddress(wallet) : null;
+  const isOwner = walletLower === owner;
+  const isCreator = walletLower ? whitelist.includes(walletLower) : false;
+  const canCreate = isOwner || isCreator;
 
   const value = useMemo<AppState>(
     () => ({
-      role, setRole, wallet, connect, disconnect,
-      proposals, whitelist, addWhitelist, removeWhitelist,
-      createProposal, closeProposal, archiveProposal, unarchiveProposal, submitVote,
-      isOwner, isCreator, canCreate,
+      wallet,
+      walletOptions,
+      connect,
+      connectWallet,
+      disconnect,
+      proposals,
+      whitelist,
+      addWhitelist,
+      removeWhitelist,
+      createProposal,
+      closeProposal,
+      archiveProposal,
+      unarchiveProposal,
+      submitVote,
+      isOwner,
+      isCreator,
+      canCreate,
+      isConnecting,
+      isSyncing,
+      error,
+      contractReady: HAS_CONTRACT_ADDRESS,
+      refresh,
+      isWalletPickerOpen,
+      openWalletPicker,
+      closeWalletPicker,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [role, wallet, proposals, whitelist]
+    [
+      wallet,
+      walletOptions,
+      connect,
+      connectWallet,
+      disconnect,
+      proposals,
+      whitelist,
+      addWhitelist,
+      removeWhitelist,
+      createProposal,
+      closeProposal,
+      archiveProposal,
+      unarchiveProposal,
+      submitVote,
+      isOwner,
+      isCreator,
+      canCreate,
+      isConnecting,
+      isSyncing,
+      error,
+      refresh,
+      isWalletPickerOpen,
+      openWalletPicker,
+      closeWalletPicker,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useApp() {
-  const c = useContext(Ctx);
-  if (!c) throw new Error("useApp must be inside AppProvider");
-  return c;
+  const context = useContext(Ctx);
+  if (!context) {
+    throw new Error("useApp must be inside AppProvider");
+  }
+  return context;
 }
 
-export { VOTING_WINDOW_HOURS };
+export { HAS_CONTRACT_ADDRESS, isWhitelisted };

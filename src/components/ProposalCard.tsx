@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import type { Proposal } from "@/mock/proposals";
+import type { Proposal } from "@/lib/reasona";
 import { CountdownTimer } from "./CountdownTimer";
 
 const categoryColors: Record<string, string> = {
@@ -46,7 +46,7 @@ export function ProposalCard({ p }: { p: Proposal }) {
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{total} votes</span>
-        {p.status === "ACTIVE" && <CountdownTimer createdAt={p.createdAt} compact />}
+        {p.status === "ACTIVE" && <CountdownTimer deadline={p.closesAt} compact />}
       </div>
 
       <div className="h-1.5 w-full rounded-full overflow-hidden bg-white/5 flex">
