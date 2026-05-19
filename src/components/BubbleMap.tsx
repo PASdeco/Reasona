@@ -108,7 +108,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
 
     const node = g.append("g").selectAll("circle").data(nodes).enter().append("circle")
       .attr("r", (d) => d.r)
-      .attr("fill", (_, i) => `url(#bg-${i})`)
+      .attr("fill", (_, i) => `url(#bg-${uid}-${i})`)
       .attr("stroke", (d) => d.color)
       .attr("stroke-opacity", 0.5)
       .style("cursor", (d) => (d.id.endsWith("-main") ? "pointer" : "default"))
