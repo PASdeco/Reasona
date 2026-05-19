@@ -58,7 +58,8 @@ function ProposalDetail() {
       <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
         <div className="order-2 lg:order-1 lg:col-span-2 space-y-6 min-w-0">
           <div className="glass rounded-2xl p-3 overflow-hidden">
-            <BubbleMap clusters={proposal.clusters} height={360} />
+            <div className="block lg:hidden"><BubbleMap clusters={proposal.clusters} height={340} /></div>
+            <div className="hidden lg:block"><BubbleMap clusters={proposal.clusters} height={520} /></div>
           </div>
           <AnalyticsPanel proposal={proposal} />
         </div>
