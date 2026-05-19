@@ -118,18 +118,18 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
 
     const sim = d3
       .forceSimulation<Node>(nodes)
-      .force("charge", d3.forceManyBody().strength(-12))
+      .force("charge", d3.forceManyBody().strength(-8))
       .force("center", d3.forceCenter(w / 2, h / 2))
-      .force("collide", d3.forceCollide<Node>().radius((d) => d.r + 3))
-      .force("x", d3.forceX(w / 2).strength(0.04))
-      .force("y", d3.forceY(h / 2).strength(0.04))
+      .force("collide", d3.forceCollide<Node>().radius((d) => d.r + 2))
+      .force("x", d3.forceX(w / 2).strength(0.12))
+      .force("y", d3.forceY(h / 2).strength(0.12))
       .force(
         "link",
         d3
           .forceLink(linkData)
           .id((d: d3.SimulationNodeDatum) => (d as Node).id)
-          .distance(50)
-          .strength(0.2)
+          .distance(30)
+          .strength(0.4)
       )
       .on("tick", () => {
         node.attr("cx", (d) => d.x ?? 0).attr("cy", (d) => d.y ?? 0);
