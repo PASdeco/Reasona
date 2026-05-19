@@ -73,7 +73,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
       const side = (["for", "against", "neutral"] as const)[i % 3];
       nodes.push({
         id: `orphan-${i}`,
-        r: 2 + Math.random() * 3,
+        r: (3 + Math.random() * 4) * scale,
         color: sideColor[side],
         side,
         label: "Outlier opinion",
