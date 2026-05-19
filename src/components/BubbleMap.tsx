@@ -88,7 +88,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
 
     const defs = svg.append("defs");
     nodes.forEach((n, i) => {
-      const g = defs.append("radialGradient").attr("id", `bg-${i}`).attr("cx", "30%").attr("cy", "30%");
+      const g = defs.append("radialGradient").attr("id", `bg-${uid}-${i}`).attr("cx", "30%").attr("cy", "30%");
       g.append("stop").attr("offset", "0%").attr("stop-color", d3.color(n.color)?.brighter(1.2)?.toString() ?? n.color).attr("stop-opacity", 0.95);
       g.append("stop").attr("offset", "100%").attr("stop-color", n.color).attr("stop-opacity", 0.4);
     });
