@@ -39,12 +39,15 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
     const svg = d3.select(ref.current);
     svg.selectAll("*").remove();
 
+    // Scale bubbles to fill available space
+    const area = width * height;
+    const scale = Math.sqrt(area / 380000); // ~1 at 760x500
     // Build nodes: one big bubble per cluster + smaller satellites per entry
     const nodes: Node[] = [];
     clusters.forEach((c) => {
       const main: Node = {
         id: `${c.id}-main`,
-        r: Math.max(28, Math.min(70, 18 + Math.sqrt(c.members) * 6)),
+        r: Math.max(50, Math.min(130, (28 + Math.sqrt(c.members) * 8) * scale)),
         color: sideColor[c.side],
         side: c.side,
         label: c.label,
@@ -52,11 +55,11 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
         cluster: c,
       };
       nodes.push(main);
-      const satellites = Math.min(6, Math.max(2, Math.floor(c.members / 12)));
+      const satellites = Math.min(8, Math.max(3, Math.floor(c.members / 10)));
       for (let i = 0; i < satellites; i++) {
         nodes.push({
           id: `${c.id}-s${i}`,
-          r: 4 + Math.random() * 6,
+          r: (6 + Math.random() * 10) * scale,
           color: sideColor[c.side],
           side: c.side,
           label: c.label,
@@ -66,7 +69,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
       }
     });
     // orphans
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 20; i++) {
       const side = (["for", "against", "neutral"] as const)[i % 3];
       nodes.push({
         id: `orphan-${i}`,
