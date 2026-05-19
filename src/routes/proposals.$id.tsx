@@ -55,14 +55,14 @@ function ProposalDetail() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="glass rounded-2xl p-3">
-            <BubbleMap clusters={proposal.clusters} height={520} />
+      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
+        <div className="order-2 lg:order-1 lg:col-span-2 space-y-6 min-w-0">
+          <div className="glass rounded-2xl p-3 overflow-hidden">
+            <BubbleMap clusters={proposal.clusters} height={360} />
           </div>
           <AnalyticsPanel proposal={proposal} />
         </div>
-        <div className="space-y-6">
+        <div className="order-1 lg:order-2 space-y-6 min-w-0">
           <VotePanel proposal={proposal} />
           <div className="glass rounded-2xl p-6">
             <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Vote Statistics</div>
