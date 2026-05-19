@@ -24,6 +24,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
   const [hovered, setHovered] = useState<Cluster | null>(null);
   const [selected, setSelected] = useState<Cluster | null>(null);
   const [width, setWidth] = useState(800);
+  const uid = useId().replace(/:/g, "");
 
   useEffect(() => {
     if (!wrapRef.current) return;
