@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import * as d3 from "d3";
 import type { Cluster } from "@/mock/proposals";
 
@@ -24,6 +24,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
   const [hovered, setHovered] = useState<Cluster | null>(null);
   const [selected, setSelected] = useState<Cluster | null>(null);
   const [width, setWidth] = useState(800);
+  const uid = useId().replace(/:/g, "");
 
   useEffect(() => {
     if (!wrapRef.current) return;
@@ -87,7 +88,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
 
     const defs = svg.append("defs");
     nodes.forEach((n, i) => {
-      const g = defs.append("radialGradient").attr("id", `bg-${i}`).attr("cx", "30%").attr("cy", "30%");
+      const g = defs.append("radialGradient").attr("id", `bg-${uid}-${i}`).attr("cx", "30%").attr("cy", "30%");
       g.append("stop").attr("offset", "0%").attr("stop-color", d3.color(n.color)?.brighter(1.2)?.toString() ?? n.color).attr("stop-opacity", 0.95);
       g.append("stop").attr("offset", "100%").attr("stop-color", n.color).attr("stop-opacity", 0.4);
     });
@@ -107,7 +108,7 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
 
     const node = g.append("g").selectAll("circle").data(nodes).enter().append("circle")
       .attr("r", (d) => d.r)
-      .attr("fill", (_, i) => `url(#bg-${i})`)
+      .attr("fill", (_, i) => `url(#bg-${uid}-${i})`)
       .attr("stroke", (d) => d.color)
       .attr("stroke-opacity", 0.5)
       .style("cursor", (d) => (d.id.endsWith("-main") ? "pointer" : "default"))
