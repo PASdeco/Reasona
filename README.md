@@ -2,7 +2,7 @@
 
 Reasona is a standalone GenLayer governance app for creator-led proposal publishing, voting, and whitelist management.
 
-This project is connected to a live GenLayer intelligent contract on StudioNet and uses real wallet-based reads and writes. It does not depend on `quorum-insight-ai` and does not use demo proposal data.
+This project is connected to a live GenLayer intelligent contract on StudioNet and uses real wallet-based reads and writes.
 
 ## Live Deployment
 
