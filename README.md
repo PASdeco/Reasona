@@ -7,7 +7,7 @@ This project is connected to a live GenLayer intelligent contract on StudioNet a
 ## Live Deployment
 
 - Owner wallet: `0xD0b8aEEdf195499773415323cae517e5b8369F94`
-- Deployed contract: `0xEa7e3aE8Ed3E973250B2F584702Ba80312b4017F`
+- Deployed contract: [`0xEa7e3aE8Ed3E973250B2F584702Ba80312b4017F`](https://studio.genlayer.com/?import-contract=0xEa7e3aE8Ed3E973250B2F584702Ba80312b4017F)
 - Network: `StudioNet`
 
 ## Features
