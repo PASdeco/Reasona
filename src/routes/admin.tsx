@@ -8,7 +8,18 @@ export const Route = createFileRoute("/admin")({
   component: Admin,
 });
 
-const cats: Category[] = ["Governance", "Treasury", "Community", "Technical", "Partnerships", "Protocol Upgrade"];
+const cats: Category[] = [
+  "Governance",
+  "Treasury",
+  "Community",
+  "Technical",
+  "Partnerships",
+  "Protocol Upgrade",
+];
+
+function isValidAddress(address: string) {
+  return /^0x[a-fA-F0-9]{40}$/.test(address.trim());
+}
 
 function Admin() {
   const {
@@ -42,13 +53,18 @@ function Admin() {
   const [changingWhitelist, setChangingWhitelist] = useState(false);
   const [updatingProposalId, setUpdatingProposalId] = useState<string | null>(null);
   const [clearingActive, setClearingActive] = useState(false);
+  const trimmedNewWallet = newWallet.trim();
+  const canAddWallet = isValidAddress(trimmedNewWallet);
 
   if (!wallet) {
     return (
       <div className="max-w-md mx-auto text-center py-32">
         <h1 className="text-2xl font-semibold mb-3">Admin Dashboard</h1>
         <p className="text-muted-foreground mb-6">Connect your wallet to manage governance.</p>
-        <button onClick={() => void connect()} className="px-5 py-3 rounded-xl bg-primary-gradient font-semibold shadow-glow">
+        <button
+          onClick={() => void connect()}
+          className="px-5 py-3 rounded-xl bg-primary-gradient font-semibold shadow-glow"
+        >
           Connect Wallet
         </button>
       </div>
@@ -60,7 +76,8 @@ function Admin() {
       <div className="max-w-2xl mx-auto py-24 px-4 text-center">
         <h1 className="text-2xl font-semibold mb-3">Contract Not Configured</h1>
         <p className="text-muted-foreground">
-          Deploy the Reasona contract and set <code>VITE_REASONA_CONTRACT_ADDRESS</code> to manage live governance.
+          Deploy the Reasona contract and set <code>VITE_REASONA_CONTRACT_ADDRESS</code> to manage
+          live governance.
         </p>
       </div>
     );
@@ -70,7 +87,9 @@ function Admin() {
     return (
       <div className="max-w-md mx-auto text-center py-32">
         <h1 className="text-2xl font-semibold mb-3">Access Restricted</h1>
-        <p className="text-muted-foreground">Only the owner and whitelisted creators can access the admin panel.</p>
+        <p className="text-muted-foreground">
+          Only the owner and whitelisted creators can access the admin panel.
+        </p>
       </div>
     );
   }
@@ -91,8 +110,10 @@ function Admin() {
     }
   };
 
-  const visible = proposals.filter((proposal) => (tab === "archived" ? proposal.status === "ARCHIVED" : proposal.status !== "ARCHIVED"));
-  const activeList = proposals.filter((proposal) => proposal.status !== "ARCHIVED");
+  const visible = proposals.filter((proposal) =>
+    tab === "archived" ? proposal.status === "ARCHIVED" : proposal.status !== "ARCHIVED",
+  );
+  const activeList = proposals.filter((proposal) => proposal.status === "ACTIVE");
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 space-y-10">
@@ -103,7 +124,9 @@ function Admin() {
       )}
 
       <div>
-        <div className="text-xs uppercase tracking-widest text-primary mb-2">{isOwner ? "Owner" : "Creator"} Dashboard</div>
+        <div className="text-xs uppercase tracking-widest text-primary mb-2">
+          {isOwner ? "Owner" : "Creator"} Dashboard
+        </div>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Admin</h1>
       </div>
 
@@ -121,7 +144,9 @@ function Admin() {
             />
           </div>
           <div>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Description</label>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">
+              Description
+            </label>
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
@@ -132,7 +157,9 @@ function Admin() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs uppercase tracking-widest text-muted-foreground">Category</label>
+              <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                Category
+              </label>
               <select
                 value={cat}
                 onChange={(e) => setCat(e.target.value as Category)}
@@ -146,16 +173,24 @@ function Admin() {
               </select>
             </div>
             <div>
-              <label className="text-xs uppercase tracking-widest text-muted-foreground">Deadline</label>
-              <div className="mt-1 rounded-lg border border-white/10 px-3 py-2 text-sm text-muted-foreground">48 hours fixed</div>
+              <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                Deadline
+              </label>
+              <div className="mt-1 rounded-lg border border-white/10 px-3 py-2 text-sm text-muted-foreground">
+                48 hours fixed
+              </div>
             </div>
           </div>
 
           {(title || desc) && (
             <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
-              <div className="text-[10px] uppercase tracking-widest text-primary mb-2">Live Preview</div>
+              <div className="text-[10px] uppercase tracking-widest text-primary mb-2">
+                Live Preview
+              </div>
               <div className="font-semibold">{title || "Untitled proposal"}</div>
-              <div className="text-sm text-muted-foreground line-clamp-2">{desc || "Description preview..."}</div>
+              <div className="text-sm text-muted-foreground line-clamp-2">
+                {desc || "Description preview..."}
+              </div>
             </div>
           )}
 
@@ -205,7 +240,10 @@ function Admin() {
           </div>
           <ul className="space-y-2 max-h-[480px] overflow-auto pr-1">
             {visible.map((proposal) => (
-              <li key={proposal.id} className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+              <li
+                key={proposal.id}
+                className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3"
+              >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{proposal.title}</div>
                   <div className="text-[11px] text-muted-foreground">
@@ -258,7 +296,9 @@ function Admin() {
                 )}
               </li>
             ))}
-            {visible.length === 0 && <li className="text-sm text-muted-foreground py-8 text-center">Nothing here.</li>}
+            {visible.length === 0 && (
+              <li className="text-sm text-muted-foreground py-8 text-center">Nothing here.</li>
+            )}
           </ul>
         </div>
       </div>
@@ -278,10 +318,10 @@ function Admin() {
             />
             <button
               onClick={async () => {
-                if (newWallet.startsWith("0x") && newWallet.length >= 8) {
+                if (canAddWallet) {
                   setChangingWhitelist(true);
                   try {
-                    await addWhitelist(newWallet);
+                    await addWhitelist(trimmedNewWallet);
                     setNewWallet("");
                   } finally {
                     setChangingWhitelist(false);
@@ -289,7 +329,7 @@ function Admin() {
                 }
               }}
               className="px-4 py-2 rounded-lg bg-primary-gradient text-sm font-semibold disabled:opacity-60"
-              disabled={changingWhitelist}
+              disabled={changingWhitelist || !canAddWallet}
             >
               {changingWhitelist ? "Working..." : "Add"}
             </button>
@@ -298,11 +338,18 @@ function Admin() {
             {whitelist.map((address) => {
               const isOwnerAddress = address.toLowerCase() === OWNER_ADDRESS.toLowerCase();
               return (
-                <li key={address} className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <li
+                  key={address}
+                  className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] p-3"
+                >
                   <div className="flex items-center gap-3 font-mono text-sm">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     {shortAddr(address)}
-                    {isOwnerAddress && <span className="text-[10px] uppercase tracking-widest text-primary ml-2">Owner (You)</span>}
+                    {isOwnerAddress && (
+                      <span className="text-[10px] uppercase tracking-widest text-primary ml-2">
+                        Owner (You)
+                      </span>
+                    )}
                   </div>
                   {!isOwnerAddress && (
                     <button

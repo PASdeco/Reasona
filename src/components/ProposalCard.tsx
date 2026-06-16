@@ -13,7 +13,8 @@ const categoryColors: Record<string, string> = {
 };
 
 const statusStyle: Record<string, string> = {
-  ACTIVE: "text-emerald-300 bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_-5px] shadow-emerald-500/30",
+  ACTIVE:
+    "text-emerald-300 bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_-5px] shadow-emerald-500/30",
   CLOSED: "text-zinc-300 bg-zinc-500/10 border-zinc-500/20",
   ARCHIVED: "text-zinc-500 bg-zinc-700/10 border-zinc-700/20",
 };
@@ -31,16 +32,22 @@ export function ProposalCard({ p }: { p: Proposal }) {
       className="glass rounded-2xl p-6 flex flex-col gap-4 group hover:border-primary/30 transition-colors"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${categoryColors[p.category]}`}>
+        <span
+          className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${categoryColors[p.category]}`}
+        >
           {p.category}
         </span>
-        <span className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${statusStyle[p.status]}`}>
+        <span
+          className={`text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${statusStyle[p.status]}`}
+        >
           {p.status}
         </span>
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold leading-tight mb-2 group-hover:text-gradient">{p.title}</h3>
+        <h3 className="text-lg font-semibold leading-tight mb-2 group-hover:text-gradient">
+          {p.title}
+        </h3>
         <p className="text-sm text-muted-foreground line-clamp-2">{p.description}</p>
       </div>
 
@@ -60,7 +67,7 @@ export function ProposalCard({ p }: { p: Proposal }) {
         params={{ id: p.id }}
         className="mt-auto inline-flex items-center justify-center text-sm font-medium px-4 py-2 rounded-lg border border-white/10 hover:bg-primary/20 hover:border-primary/40 transition-all"
       >
-        View Proposal →
+        View Proposal -&gt;
       </Link>
     </motion.div>
   );

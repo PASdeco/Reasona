@@ -29,7 +29,9 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
   useEffect(() => {
     if (!wrapRef.current) return;
     const ro = new ResizeObserver((entries) => {
-      for (const e of entries) setWidth(e.contentRect.width);
+      for (const entry of entries) {
+        setWidth(entry.contentRect.width);
+      }
     });
     ro.observe(wrapRef.current);
     return () => ro.disconnect();
@@ -37,48 +39,49 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
 
   useEffect(() => {
     if (!ref.current) return;
+
+    const svg = d3.select(ref.current);
     if (clusters.length === 0) {
-      d3.select(ref.current).selectAll("*").remove();
+      svg.selectAll("*").remove();
       return;
     }
-    const svg = d3.select(ref.current);
+
     svg.selectAll("*").remove();
 
-    // Scale bubbles to fill available space
     const area = width * height;
-    const scale = Math.sqrt(area / 380000); // ~1 at 760x500
-    // Build nodes: one big bubble per cluster + smaller satellites per entry
+    const scale = Math.sqrt(area / 380000);
     const nodes: Node[] = [];
-    clusters.forEach((c) => {
-      const main: Node = {
-        id: `${c.id}-main`,
-        r: Math.max(50, Math.min(130, (28 + Math.sqrt(c.members) * 8) * scale)),
-        color: sideColor[c.side],
-        side: c.side,
-        label: c.label,
-        members: c.members,
-        cluster: c,
-      };
-      nodes.push(main);
-      const satellites = Math.min(8, Math.max(3, Math.floor(c.members / 10)));
+
+    clusters.forEach((cluster) => {
+      nodes.push({
+        id: `${cluster.id}-main`,
+        r: Math.max(50, Math.min(130, (28 + Math.sqrt(cluster.members) * 8) * scale)),
+        color: sideColor[cluster.side],
+        side: cluster.side,
+        label: cluster.label,
+        members: cluster.members,
+        cluster,
+      });
+
+      const satellites = Math.min(8, Math.max(3, Math.floor(cluster.members / 10)));
       for (let i = 0; i < satellites; i++) {
         nodes.push({
-          id: `${c.id}-s${i}`,
-          r: (6 + Math.random() * 10) * scale,
-          color: sideColor[c.side],
-          side: c.side,
-          label: c.label,
-          members: c.members,
-          cluster: c,
+          id: `${cluster.id}-s${i}`,
+          r: Math.max(2, (6 + Math.random() * 10) * scale),
+          color: sideColor[cluster.side],
+          side: cluster.side,
+          label: cluster.label,
+          members: cluster.members,
+          cluster,
         });
       }
     });
-    // orphans
+
     for (let i = 0; i < 20; i++) {
       const side = (["for", "against", "neutral"] as const)[i % 3];
       nodes.push({
         id: `orphan-${i}`,
-        r: (3 + Math.random() * 4) * scale,
+        r: Math.max(2, (3 + Math.random() * 4) * scale),
         color: sideColor[side],
         side,
         label: "Outlier opinion",
@@ -87,76 +90,105 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
       });
     }
 
-    const w = width;
-    const h = height;
-
     const defs = svg.append("defs");
-    nodes.forEach((n, i) => {
-      const g = defs.append("radialGradient").attr("id", `bg-${uid}-${i}`).attr("cx", "30%").attr("cy", "30%");
-      g.append("stop").attr("offset", "0%").attr("stop-color", d3.color(n.color)?.brighter(1.2)?.toString() ?? n.color).attr("stop-opacity", 0.95);
-      g.append("stop").attr("offset", "100%").attr("stop-color", n.color).attr("stop-opacity", 0.4);
+    nodes.forEach((node, index) => {
+      const gradient = defs
+        .append("radialGradient")
+        .attr("id", `bg-${uid}-${index}`)
+        .attr("cx", "30%")
+        .attr("cy", "30%");
+
+      gradient
+        .append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", d3.color(node.color)?.brighter(1.2)?.toString() ?? node.color)
+        .attr("stop-opacity", 0.95);
+
+      gradient
+        .append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", node.color)
+        .attr("stop-opacity", 0.4);
     });
 
-    const g = svg.append("g");
+    const graph = svg.append("g");
 
     const linkData: { source: string; target: string }[] = [];
-    clusters.forEach((c) => {
-      const main = `${c.id}-main`;
-      nodes.filter((n) => n.id.startsWith(`${c.id}-s`)).forEach((n) => {
-        linkData.push({ source: main, target: n.id });
-      });
+    clusters.forEach((cluster) => {
+      const main = `${cluster.id}-main`;
+      nodes
+        .filter((node) => node.id.startsWith(`${cluster.id}-s`))
+        .forEach((node) => {
+          linkData.push({ source: main, target: node.id });
+        });
     });
 
-    const link = g.append("g").attr("stroke", "#a855f7").attr("stroke-opacity", 0.15)
-      .selectAll("line").data(linkData).enter().append("line").attr("stroke-width", 0.8);
+    const link = graph
+      .append("g")
+      .attr("stroke", "#a855f7")
+      .attr("stroke-opacity", 0.15)
+      .selectAll("line")
+      .data(linkData)
+      .enter()
+      .append("line")
+      .attr("stroke-width", 0.8);
 
-    const node = g.append("g").selectAll("circle").data(nodes).enter().append("circle")
-      .attr("r", (d) => d.r)
-      .attr("fill", (_, i) => `url(#bg-${uid}-${i})`)
-      .attr("stroke", (d) => d.color)
+    const node = graph
+      .append("g")
+      .selectAll("circle")
+      .data(nodes)
+      .enter()
+      .append("circle")
+      .attr("r", (datum) => datum.r)
+      .attr("fill", (_, index) => `url(#bg-${uid}-${index})`)
+      .attr("stroke", (datum) => datum.color)
       .attr("stroke-opacity", 0.5)
-      .style("cursor", (d) => (d.id.endsWith("-main") ? "pointer" : "default"))
-      .style("filter", (d) => (d.id.endsWith("-main") ? `drop-shadow(0 0 10px ${d.color})` : "none"))
-      .on("mouseenter", (_, d) => d.id.endsWith("-main") && setHovered(d.cluster))
+      .style("cursor", (datum) => (datum.id.endsWith("-main") ? "pointer" : "default"))
+      .style("filter", (datum) =>
+        datum.id.endsWith("-main") ? `drop-shadow(0 0 10px ${datum.color})` : "none",
+      )
+      .on("mouseenter", (_, datum) => datum.id.endsWith("-main") && setHovered(datum.cluster))
       .on("mouseleave", () => setHovered(null))
-      .on("click", (_, d) => d.id.endsWith("-main") && setSelected(d.cluster));
+      .on("click", (_, datum) => datum.id.endsWith("-main") && setSelected(datum.cluster));
 
-    const sim = d3
+    const simulation = d3
       .forceSimulation<Node>(nodes)
       .force("charge", d3.forceManyBody().strength(-8))
-      .force("center", d3.forceCenter(w / 2, h / 2))
-      .force("collide", d3.forceCollide<Node>().radius((d) => d.r + 2))
-      .force("x", d3.forceX(w / 2).strength(0.12))
-      .force("y", d3.forceY(h / 2).strength(0.12))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force(
+        "collide",
+        d3.forceCollide<Node>().radius((datum) => datum.r + 2),
+      )
+      .force("x", d3.forceX(width / 2).strength(0.12))
+      .force("y", d3.forceY(height / 2).strength(0.12))
       .force(
         "link",
         d3
           .forceLink(linkData)
-          .id((d: d3.SimulationNodeDatum) => (d as Node).id)
+          .id((datum: d3.SimulationNodeDatum) => (datum as Node).id)
           .distance(30)
-          .strength(0.4)
+          .strength(0.4),
       )
       .on("tick", () => {
-        node.attr("cx", (d) => d.x ?? 0).attr("cy", (d) => d.y ?? 0);
+        node.attr("cx", (datum) => datum.x ?? 0).attr("cy", (datum) => datum.y ?? 0);
         link
-          .attr("x1", (d) => (d.source as unknown as Node).x ?? 0)
-          .attr("y1", (d) => (d.source as unknown as Node).y ?? 0)
-          .attr("x2", (d) => (d.target as unknown as Node).x ?? 0)
-          .attr("y2", (d) => (d.target as unknown as Node).y ?? 0);
+          .attr("x1", (datum) => (datum.source as unknown as Node).x ?? 0)
+          .attr("y1", (datum) => (datum.source as unknown as Node).y ?? 0)
+          .attr("x2", (datum) => (datum.target as unknown as Node).x ?? 0)
+          .attr("y2", (datum) => (datum.target as unknown as Node).y ?? 0);
       });
 
-    // gentle pulse
     let pulse = 0;
     const pulseTimer = d3.interval(() => {
       pulse += 0.05;
-      node.attr("r", (d) => d.r + Math.sin(pulse + d.r) * 0.6);
+      node.attr("r", (datum) => Math.max(2, datum.r + Math.sin(pulse + datum.r) * 0.6));
     }, 50);
 
     return () => {
-      sim.stop();
+      simulation.stop();
       pulseTimer.stop();
     };
-  }, [clusters, width, height]);
+  }, [clusters, width, height, uid]);
 
   return (
     <div ref={wrapRef} className="relative w-full">
@@ -172,27 +204,40 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
       {hovered && (
         <div className="absolute top-3 left-3 glass rounded-lg px-3 py-2 text-xs max-w-xs pointer-events-none">
           <div className="font-semibold mb-1" style={{ color: sideColor[hovered.side] }}>
-            {hovered.members} voters · {hovered.side.toUpperCase()}
+            {hovered.members} voters | {hovered.side.toUpperCase()}
           </div>
           <div className="text-muted-foreground">{hovered.label}</div>
         </div>
       )}
       {selected && (
-        <div className="absolute inset-3 glass rounded-xl p-4 overflow-auto" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="absolute inset-3 glass rounded-xl p-4 overflow-auto"
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-[10px] uppercase tracking-widest" style={{ color: sideColor[selected.side] }}>
-                Cluster {selected.id} · {selected.members} members
+              <div
+                className="text-[10px] uppercase tracking-widest"
+                style={{ color: sideColor[selected.side] }}
+              >
+                Cluster {selected.id} | {selected.members} members
               </div>
               <div className="font-semibold">{selected.label}</div>
             </div>
-            <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+            <button
+              onClick={() => setSelected(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              x
+            </button>
           </div>
           <ul className="space-y-2 text-xs">
-            {selected.entries.slice(0, 12).map((e, i) => (
-              <li key={i} className="border border-white/5 rounded-md p-2 bg-white/[0.02]">
-                <div className="font-mono text-violet-300 mb-1">{e.address.slice(0, 8)}...{e.address.slice(-4)}</div>
-                <div className="text-muted-foreground">{e.reasoning}</div>
+            {selected.entries.slice(0, 12).map((entry, index) => (
+              <li key={index} className="border border-white/5 rounded-md p-2 bg-white/[0.02]">
+                <div className="font-mono text-violet-300 mb-1">
+                  {entry.address.slice(0, 8)}...{entry.address.slice(-4)}
+                </div>
+                <div className="text-muted-foreground">{entry.reasoning}</div>
               </li>
             ))}
           </ul>

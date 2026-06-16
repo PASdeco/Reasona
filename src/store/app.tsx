@@ -33,6 +33,7 @@ import {
 import type { Category, Proposal, VoteChoice } from "@/lib/reasona";
 
 type WalletAddress = `0x${string}`;
+const ENABLE_APP_DEBUG = import.meta.env.DEV;
 
 interface AppState {
   wallet: string | null;
@@ -44,7 +45,11 @@ interface AppState {
   whitelist: string[];
   addWhitelist: (address: string) => Promise<void>;
   removeWhitelist: (address: string) => Promise<void>;
-  createProposal: (proposal: { title: string; description: string; category: Category }) => Promise<string | undefined>;
+  createProposal: (proposal: {
+    title: string;
+    description: string;
+    category: Category;
+  }) => Promise<string | undefined>;
   closeProposal: (id: string) => Promise<void>;
   archiveProposal: (id: string) => Promise<void>;
   unarchiveProposal: (id: string) => Promise<void>;
@@ -69,6 +74,7 @@ function normalizeAddress(address: string) {
 }
 
 function logApp(step: string, payload?: unknown) {
+  if (!ENABLE_APP_DEBUG) return;
   if (payload === undefined) {
     console.info(`[Reasona][App] ${step}`);
     return;
@@ -77,6 +83,7 @@ function logApp(step: string, payload?: unknown) {
 }
 
 function logAppError(step: string, payload?: unknown) {
+  if (!ENABLE_APP_DEBUG) return;
   if (payload === undefined) {
     console.error(`[Reasona][App] ${step}`);
     return;
@@ -133,7 +140,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setProposals([]);
       setWhitelist([]);
       setOwner(OWNER_ADDRESS.toLowerCase());
-      setError("Set VITE_REASONA_CONTRACT_ADDRESS to your deployed Reasona contract to enable live data.");
+      setError(
+        "Set VITE_REASONA_CONTRACT_ADDRESS to your deployed Reasona contract to enable live data.",
+      );
       return;
     }
 
@@ -191,8 +200,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void loadWalletOptions()
       .then(async (options) => {
         if (!mounted || options.length === 0) return;
-        const restoredId = typeof window !== "undefined" ? window.localStorage.getItem("reasona:last-wallet-id") : null;
-        const preferred = (restoredId ? options.find((option) => option.id === restoredId) : undefined) ?? options[0];
+        const restoredId =
+          typeof window !== "undefined"
+            ? window.localStorage.getItem("reasona:last-wallet-id")
+            : null;
+        const preferred =
+          (restoredId ? options.find((option) => option.id === restoredId) : undefined) ??
+          options[0];
         if (!preferred) return;
         const account = await requestAccounts(preferred.provider, "eth_accounts");
         if (!mounted || !account) return;
@@ -218,7 +232,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const handleAccountsChanged = (accounts: unknown) => {
       const next =
-        Array.isArray(accounts) && typeof accounts[0] === "string" ? normalizeAddress(accounts[0]) : null;
+        Array.isArray(accounts) && typeof accounts[0] === "string"
+          ? normalizeAddress(accounts[0])
+          : null;
       setWallet(next);
     };
 
@@ -235,7 +251,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const openWalletPicker = useCallback(async () => {
     const options = await loadWalletOptions();
     if (options.length === 0) {
-      throw new Error("No browser wallet was found. Install MetaMask, Rabby, Zerion, or another injected wallet.");
+      throw new Error(
+        "No browser wallet was found. Install MetaMask, Rabby, Zerion, or another injected wallet.",
+      );
     }
     if (options.length === 1) {
       await connectWalletInternal(options[0]);
@@ -274,7 +292,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const options = walletOptions.length > 0 ? walletOptions : await loadWalletOptions();
       if (options.length === 0) {
-        throw new Error("No browser wallet was found. Install MetaMask, Rabby, Zerion, or another injected wallet.");
+        throw new Error(
+          "No browser wallet was found. Install MetaMask, Rabby, Zerion, or another injected wallet.",
+        );
       }
       if (options.length === 1) {
         await connectWalletInternal(options[0]);
@@ -307,7 +327,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const withWallet = useCallback(
-    async <T,>(action: (address: WalletAddress, provider: InjectedWalletProvider | null) => Promise<T>) => {
+    async <T,>(
+      action: (address: WalletAddress, provider: InjectedWalletProvider | null) => Promise<T>,
+    ) => {
       if (!wallet) {
         throw new Error("Connect a wallet first.");
       }
@@ -332,7 +354,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         descriptionLength: description.length,
       });
       await runWrite(() =>
-        withWallet((address, provider) => createProposalOnChain(address, title, description, category, provider)),
+        withWallet((address, provider) =>
+          createProposalOnChain(address, title, description, category, provider),
+        ),
       );
       await refresh();
       const latest = await getProposals();
@@ -386,7 +410,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         reasoningLength: reasoning.length,
       });
       await runWrite(() =>
-        withWallet((address, provider) => submitVoteOnChain(address, id, choice, reasoning, provider)),
+        withWallet((address, provider) =>
+          submitVoteOnChain(address, id, choice, reasoning, provider),
+        ),
       );
       const latest = await getProposal(id);
       if (latest) {
@@ -398,7 +424,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       await refresh();
     },
-    [refresh, runWrite, withWallet],
+    [refresh, runWrite, wallet, withWallet],
   );
 
   const addWhitelist = useCallback<AppState["addWhitelist"]>(
@@ -409,9 +435,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         target,
         isOwner: wallet ? normalizeAddress(wallet) === owner : false,
       });
-      await runWrite(() =>
-        withWallet((caller, provider) => addCreator(caller, target, provider)),
-      );
+      await runWrite(() => withWallet((caller, provider) => addCreator(caller, target, provider)));
       await refresh();
     },
     [owner, refresh, runWrite, wallet, withWallet],

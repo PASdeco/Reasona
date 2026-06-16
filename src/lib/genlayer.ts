@@ -18,6 +18,9 @@ export const CONTRACT_ADDRESS = (import.meta.env.VITE_REASONA_CONTRACT_ADDRESS?.
   EMPTY_ADDRESS) as `0x${string}`;
 
 export const HAS_CONTRACT_ADDRESS = CONTRACT_ADDRESS !== EMPTY_ADDRESS;
+const ENABLE_TX_DEBUG = import.meta.env.DEV;
+const GENLAYER_RECEIPT_WAIT_INTERVAL_MS = 5_000;
+const GENLAYER_RECEIPT_WAIT_RETRIES = 72;
 
 const readClient = createClient({
   chain: studionet,
@@ -39,6 +42,7 @@ function normalizeAddressLower(address: string) {
 }
 
 function logDebug(step: string, payload?: unknown) {
+  if (!ENABLE_TX_DEBUG) return;
   if (payload === undefined) {
     console.info(`[Reasona][GenLayer] ${step}`);
     return;
@@ -47,11 +51,23 @@ function logDebug(step: string, payload?: unknown) {
 }
 
 function logError(step: string, payload?: unknown) {
+  if (!ENABLE_TX_DEBUG) return;
   if (payload === undefined) {
     console.error(`[Reasona][GenLayer] ${step}`);
     return;
   }
   console.error(`[Reasona][GenLayer] ${step}`, payload);
+}
+
+function persistTxDebug(txDebug: Record<string, unknown>) {
+  if (ENABLE_TX_DEBUG) {
+    window.__reasonaLastTxDebug = txDebug;
+  }
+}
+
+function getTransactionStatusName(transaction: Record<string, unknown>) {
+  const rawStatus = transaction.statusName ?? transaction.txStatusName ?? transaction.status;
+  return String(rawStatus ?? "").toUpperCase();
 }
 
 function serializeError(error: unknown) {
@@ -147,13 +163,20 @@ async function ensureStudionetWalletSession(provider: InjectedWalletProvider) {
     })) as Record<string, { id?: string }>;
     logDebug("wallet_getSnaps result", installedSnaps);
 
-    const snapInstalled = Object.values(installedSnaps).some((snap) => snap?.id === "npm:genlayer-wallet-plugin");
+    const snapInstalled = Object.values(installedSnaps).some(
+      (snap) => snap?.id === "npm:genlayer-wallet-plugin",
+    );
     if (!snapInstalled) {
-      logDebug("GenLayer snap is not installed on selected provider; continuing with standard wallet flow");
+      logDebug(
+        "GenLayer snap is not installed on selected provider; continuing with standard wallet flow",
+      );
     }
   } catch (error) {
     const details = serializeError(error);
-    logDebug("wallet_getSnaps unavailable on selected provider; continuing with standard wallet flow", details);
+    logDebug(
+      "wallet_getSnaps unavailable on selected provider; continuing with standard wallet flow",
+      details,
+    );
   }
 }
 
@@ -230,7 +253,9 @@ function parseProposal(raw: Record<string, unknown>): Proposal {
     previousStatus: raw.previous_status ? String(raw.previous_status) : undefined,
     creator: String(raw.creator ?? ""),
     createdAt: Number(raw.created_at ?? 0),
-    closesAt: Number(raw.closes_at ?? Number(raw.created_at ?? 0) + VOTING_WINDOW_HOURS * 3_600_000),
+    closesAt: Number(
+      raw.closes_at ?? Number(raw.created_at ?? 0) + VOTING_WINDOW_HOURS * 3_600_000,
+    ),
     closedAt: raw.closed_at ? Number(raw.closed_at) : undefined,
     yes: Number(raw.yes ?? 0),
     no: Number(raw.no ?? 0),
@@ -288,7 +313,7 @@ async function write(
     provider: providerSnapshot(provider),
     startedAt: new Date().toISOString(),
   };
-  window.__reasonaLastTxDebug = txDebug;
+  persistTxDebug(txDebug);
 
   logDebug("Preparing GenLayer write transaction", txDebug);
   txDebug.walletPermissions = await getPermissions(provider);
@@ -364,12 +389,46 @@ async function write(
       hash,
       status: TransactionStatus.ACCEPTED,
       fullTransaction: true,
+      interval: GENLAYER_RECEIPT_WAIT_INTERVAL_MS,
+      retries: GENLAYER_RECEIPT_WAIT_RETRIES,
     });
-    const receipt = await client.waitForTransactionReceipt({
-      hash,
-      status: TransactionStatus.ACCEPTED,
-      fullTransaction: true,
-    });
+
+    let receipt: unknown;
+    try {
+      receipt = await client.waitForTransactionReceipt({
+        hash,
+        status: TransactionStatus.ACCEPTED,
+        interval: GENLAYER_RECEIPT_WAIT_INTERVAL_MS,
+        retries: GENLAYER_RECEIPT_WAIT_RETRIES,
+        fullTransaction: true,
+      });
+    } catch (waitError) {
+      txDebug.receiptWaitError = serializeError(waitError);
+      logError("waitForTransactionReceipt failed", txDebug.receiptWaitError);
+
+      const latestTransaction = (await client.getTransaction({
+        hash,
+      })) as unknown as Record<string, unknown>;
+      txDebug.latestTransactionAfterWaitFailure = latestTransaction;
+
+      const latestStatus = getTransactionStatusName(latestTransaction);
+      logDebug("Latest transaction after wait failure", {
+        hash,
+        latestStatus,
+      });
+
+      if (
+        latestStatus === TransactionStatus.ACCEPTED ||
+        latestStatus === TransactionStatus.FINALIZED
+      ) {
+        receipt = latestTransaction;
+      } else {
+        throw new Error(
+          `Transaction is still processing on GenLayer StudioNet. Current status: ${latestStatus || "UNKNOWN"}. Please wait a little longer and refresh again.`,
+        );
+      }
+    }
+
     txDebug.receipt = receipt as unknown as Record<string, unknown>;
     logDebug("Full transaction receipt", receipt);
 
@@ -406,12 +465,12 @@ async function write(
       }
     }
 
-    window.__reasonaLastTxDebug = txDebug;
+    persistTxDebug(txDebug);
     throw error;
   }
 
   txDebug.completedAt = new Date().toISOString();
-  window.__reasonaLastTxDebug = txDebug;
+  persistTxDebug(txDebug);
   logDebug("GenLayer write transaction completed", txDebug);
 }
 

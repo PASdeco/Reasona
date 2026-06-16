@@ -1,25 +1,94 @@
 # Reasona
 
-Reasona is a standalone GenLayer governance app for creator-led proposal publishing, voting, and whitelist management.
+Reasona is a GenLayer-native governance and reasoning platform where proposal analysis, vote interpretation, clustering, and synthesis happen inside an Intelligent Contract through GenLayer consensus.
 
-This project is connected to a live GenLayer intelligent contract on StudioNet and uses real wallet-based reads and writes. It does not depend on `quorum-insight-ai` and does not use demo proposal data.
+Instead of acting like a normal deterministic poll or proposal store, Reasona uses onchain AI reasoning to:
+
+- analyze proposal source material from the web
+- interpret voter reasoning
+- group similar arguments into clusters
+- synthesize a live governance overview from the arguments on each side
+
+## What Makes Reasona GenLayer-Native
+
+Reasona is designed around GenLayer's nondeterministic execution model.
+
+Inside the Intelligent Contract, it uses:
+
+- `gl.nondet.web.render(...)` to fetch source content from the web
+- `gl.nondet.exec_prompt(...)` to analyze proposals and votes
+- `gl.vm.run_nondet_unsafe(...)` so validators independently verify the reasoning output through consensus
+
+This means the reasoning flow is not done offchain in the frontend or a backend helper. It is executed and validated inside the contract itself.
+
+## Core Flow
+
+### Proposal Creation
+
+When a whitelisted creator publishes a proposal, Reasona can:
+
+- detect a source URL in the proposal description
+- fetch the source content onchain
+- generate a structured source summary
+- attach evidence bullets grounded in that source
+
+### Vote Submission
+
+When a voter submits a vote with reasoning, Reasona can:
+
+- analyze the argument behind the vote
+- determine the stance
+- generate a reusable cluster label and cluster summary
+- decide whether the vote belongs in an existing argument cluster or a new one
+- store structured analysis directly onchain
+
+### Proposal Intelligence Refresh
+
+Reasona can also recompute proposal intelligence by:
+
+- refreshing source analysis
+- re-analyzing vote reasoning
+- rebuilding clusters
+- re-synthesizing the proposal overview
 
 ## Live Deployment
 
-- Owner wallet: `0xD0b8aEEdf195499773415323cae517e5b8369F94`
-- Deployed contract: `0xEa7e3aE8Ed3E973250B2F584702Ba80312b4017F`
 - Network: `StudioNet`
+- Validated contract: `0xc522209f23B56CB7898F29a3c12c35a2f5F1d76A`
+- Owner wallet: `0xD0b8aEEdf195499773415323cae517e5b8369F94`
+
+## Validation Status
+
+This deployment was validated live on StudioNet.
+
+Confirmed successfully:
+
+- proposal creation
+- source-aware proposal analysis inside the contract
+- vote submission
+- onchain vote reasoning analysis
+- reasoning cluster creation
+- multi-voter clustering behavior
+- synthesized proposal overview updates
+- read methods against live contract state
+
+Validated examples included:
+
+- one supporting vote that produced a `for` cluster
+- one opposing vote that produced an `against` cluster
+- a contested overview generated from both sides
 
 ## Features
 
-- Connect injected EVM wallets
-- Read live proposal data from GenLayer
-- Create proposals on-chain
-- Vote on proposals on-chain
-- Add and remove whitelisted creators from the owner wallet
-- Close, archive, and unarchive proposals
-- Clear active test proposals by archiving them
-- Surface transaction diagnostics and write errors in the frontend
+- Live GenLayer contract reads and writes
+- Proposal publishing by whitelisted creators
+- Community voting with reasoning
+- Onchain reasoning clusters for support and opposition
+- Source-aware proposal summaries
+- Synthesized proposal overviews
+- Whitelist management for creators
+- Proposal closing, archiving, and unarchiving
+- Frontend transaction diagnostics for StudioNet writes
 
 ## Roles
 
@@ -30,7 +99,9 @@ The owner wallet can:
 - create proposals
 - add creators to the whitelist
 - remove creators from the whitelist
-- close, archive, and unarchive proposals
+- close proposals
+- archive proposals
+- unarchive proposals
 
 ### Whitelisted Creators
 
@@ -38,14 +109,69 @@ Whitelisted creators can:
 
 - create proposals
 - close proposals
-- archive and unarchive proposals
+- archive proposals
+- unarchive proposals
 
 ### Community Wallets
 
 Community wallets can:
 
 - browse proposals
-- vote on active proposals
+- submit votes with reasoning
+- contribute to the evolving argument map around a proposal
+
+## Smart Contract
+
+Contract file:
+
+- `contracts/reasona.py`
+
+Key public methods:
+
+- `get_owner`
+- `get_whitelist`
+- `is_whitelisted`
+- `get_proposals`
+- `get_archived_proposals`
+- `get_proposal`
+- `get_votes`
+- `get_my_vote`
+- `get_my_votes`
+- `create_proposal`
+- `submit_vote`
+- `refresh_proposal_intelligence`
+- `close_proposal`
+- `archive_proposal`
+- `unarchive_proposal`
+- `add_creator`
+- `remove_creator`
+
+Key onchain reasoning outputs stored per proposal or vote:
+
+- `source`
+- `overview`
+- `clusters`
+- `analysis`
+
+## Frontend
+
+The frontend is a React + TypeScript app connected directly to the live GenLayer contract.
+
+Main integration files:
+
+- `src/lib/genlayer.ts`
+- `src/lib/reasona.ts`
+- `src/lib/wallets.ts`
+- `src/store/app.tsx`
+
+These handle:
+
+- injected wallet discovery
+- StudioNet wallet setup
+- live contract reads
+- live contract writes
+- transaction waiting and recovery
+- app-wide governance state
 
 ## Tech Stack
 
@@ -55,51 +181,7 @@ Community wallets can:
 - TanStack Router
 - Tailwind CSS
 - `genlayer-js`
-
-## Smart Contract
-
-Contract file:
-
-- `contracts/reasona.py`
-
-Current contract methods:
-
-- `get_owner`
-- `get_whitelist`
-- `is_whitelisted`
-- `get_proposals`
-- `get_archived_proposals`
-- `get_proposal`
-- `get_my_vote`
-- `create_proposal`
-- `submit_vote`
-- `close_proposal`
-- `archive_proposal`
-- `unarchive_proposal`
-- `add_creator`
-- `remove_creator`
-
-Note:
-The currently deployed contract does not support hard deletion of proposals. To remove proposals from the active list, they must be archived.
-
-## Frontend Integration
-
-Main integration files:
-
-- `src/lib/genlayer.ts`
-- `src/lib/reasona.ts`
-- `src/lib/wallets.ts`
-- `src/store/app.tsx`
-
-These files handle:
-
-- wallet discovery
-- provider selection
-- live contract reads
-- live contract writes
-- transaction waiting
-- error handling
-- app-wide governance state
+- GenLayer Intelligent Contracts
 
 ## Project Structure
 
@@ -109,6 +191,7 @@ contracts/
 
 src/
   components/
+    ProposalCard.tsx
     VotePanel.tsx
     WalletConnect.tsx
     WalletPicker.tsx
@@ -131,7 +214,7 @@ src/
 Create a `.env` file:
 
 ```env
-VITE_REASONA_CONTRACT_ADDRESS=0xEa7e3aE8Ed3E973250B2F584702Ba80312b4017F
+VITE_REASONA_CONTRACT_ADDRESS=0xc522209f23B56CB7898F29a3c12c35a2f5F1d76A
 ```
 
 ## Installation
@@ -154,32 +237,28 @@ npm run build
 
 ## Wallet Support
 
-Reasona uses injected wallet discovery and selected-provider transaction execution.
+Reasona uses injected EVM wallets for frontend transaction execution on StudioNet.
 
-Supported wallet behavior depends on the wallet’s ability to:
-
-- expose a standard injected EVM provider
-- switch to the StudioNet chain
-- sign and submit EVM-compatible transaction requests
-
-The app is designed to work with injected wallets such as:
+It is designed to work with wallets such as:
 
 - MetaMask
 - Rabby
 - Zerion
 
-## Admin Workflow
+Supported behavior depends on whether the wallet can:
 
-From the admin dashboard, authorized wallets can:
+- expose an injected EVM provider
+- switch or add the StudioNet chain
+- sign and submit EVM-compatible transaction requests
 
-- publish proposals
-- close proposals
-- archive proposals
-- unarchive proposals
-- add creators
-- remove creators
-- clear active proposals
+## Notes
 
-## Status
+- Proposals are not hard-deleted from the current deployment.
+- To remove a proposal from the active list, archive it.
+- StudioNet transactions can take time to move through consensus stages, so the frontend includes extended receipt waiting and better handling for long-running transactions.
 
-Reasona is configured as a live standalone GenLayer governance app connected to the deployed StudioNet contract.
+## Summary
+
+Reasona turns governance from a plain vote counter into an onchain reasoning system.
+
+It lets people not only vote, but explain why they voted, then uses GenLayer consensus to structure those arguments into clusters and proposal-level intelligence that other participants can inspect.
