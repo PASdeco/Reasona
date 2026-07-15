@@ -40,22 +40,21 @@ When a voter submits a vote with reasoning, Reasona can:
 - determine the stance
 - generate a reusable cluster label and cluster summary
 - decide whether the vote belongs in an existing argument cluster or a new one
-- store structured analysis directly onchain
+- store the individual vote under a voter-specific key
+- update bounded aggregate vote and cluster statistics
 
 ### Proposal Intelligence Refresh
 
-Reasona can also recompute proposal intelligence by:
+Reasona can also refresh bounded proposal-level intelligence by:
 
 - refreshing source analysis
-- re-analyzing vote reasoning
-- rebuilding clusters
-- re-synthesizing the proposal overview
+- re-synthesizing the proposal overview from aggregate vote and cluster statistics
 
 ## Live Deployment
 
 - Network: `StudioNet`
-- Validated contract: `0xc522209f23B56CB7898F29a3c12c35a2f5F1d76A`
-- Owner wallet: `0xD0b8aEEdf195499773415323cae517e5b8369F94`
+- Contract address: `0x2C97F6aEe54B080440c57945E0f4661bCA1565E4`
+- Owner wallet: initialized dynamically from the deployer address in the contract constructor
 
 ## Validation Status
 
@@ -134,7 +133,9 @@ Key public methods:
 - `get_proposals`
 - `get_archived_proposals`
 - `get_proposal`
-- `get_votes`
+- `has_voted`
+- `get_vote`
+- `get_votes` for explicit voter address batches
 - `get_my_vote`
 - `get_my_votes`
 - `create_proposal`
@@ -146,12 +147,12 @@ Key public methods:
 - `add_creator`
 - `remove_creator`
 
-Key onchain reasoning outputs stored per proposal or vote:
+Key onchain storage:
 
-- `source`
-- `overview`
-- `clusters`
-- `analysis`
+- proposals store bounded metadata, vote totals, `cluster_count`, `source`, and `overview`
+- individual votes are stored under direct `proposal_id:voter` keys with the submitted reasoning and analysis
+- cluster aggregates are stored under separate per-cluster keys with label, side, member count, and confidence
+- proposal JSON does not contain voter lists, raw vote reasoning arrays, or per-vote cluster entries
 
 ## Frontend
 
@@ -214,7 +215,8 @@ src/
 Create a `.env` file:
 
 ```env
-VITE_REASONA_CONTRACT_ADDRESS=0xc522209f23B56CB7898F29a3c12c35a2f5F1d76A
+# Replace with the address returned by redeploying contracts/reasona.py.
+VITE_REASONA_CONTRACT_ADDRESS=0x2C97F6aEe54B080440c57945E0f4661bCA1565E4
 ```
 
 ## Installation
