@@ -5,7 +5,8 @@ function walletLabel(name: string) {
 }
 
 export function WalletPicker() {
-  const { walletOptions, isWalletPickerOpen, closeWalletPicker, connectWallet, isConnecting } = useApp();
+  const { walletOptions, isWalletPickerOpen, closeWalletPicker, connectWallet, isConnecting } =
+    useApp();
 
   if (!isWalletPickerOpen) return null;
 
@@ -14,7 +15,9 @@ export function WalletPicker() {
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-background p-6 shadow-2xl">
         <div className="mb-4">
           <div className="text-sm font-semibold">Choose a wallet</div>
-          <div className="text-xs text-muted-foreground">Pick the injected wallet you want Reasona to use.</div>
+          <div className="text-xs text-muted-foreground">
+            Pick the injected wallet you want Reasona to use.
+          </div>
         </div>
         <div className="space-y-2">
           {walletOptions.map((wallet) => (
@@ -35,7 +38,10 @@ export function WalletPicker() {
           ))}
         </div>
         <div className="mt-4 flex justify-end">
-          <button onClick={closeWalletPicker} className="text-sm text-muted-foreground hover:text-foreground">
+          <button
+            onClick={closeWalletPicker}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
             Cancel
           </button>
         </div>

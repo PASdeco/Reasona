@@ -4,9 +4,17 @@ import { useApp } from "@/store/app";
 import type { Proposal, VoteChoice } from "@/lib/reasona";
 
 const choices: { v: VoteChoice; color: string; ring: string }[] = [
-  { v: "Yes", color: "text-emerald-300", ring: "shadow-emerald-500/40 border-emerald-500/60 bg-emerald-500/10" },
+  {
+    v: "Yes",
+    color: "text-emerald-300",
+    ring: "shadow-emerald-500/40 border-emerald-500/60 bg-emerald-500/10",
+  },
   { v: "No", color: "text-red-300", ring: "shadow-red-500/40 border-red-500/60 bg-red-500/10" },
-  { v: "Abstain", color: "text-zinc-300", ring: "shadow-zinc-400/30 border-zinc-400/50 bg-zinc-400/10" },
+  {
+    v: "Abstain",
+    color: "text-zinc-300",
+    ring: "shadow-zinc-400/30 border-zinc-400/50 bg-zinc-400/10",
+  },
 ];
 
 export function VotePanel({ proposal }: { proposal: Proposal }) {
@@ -37,7 +45,9 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Your Vote</div>
         {vote ? (
           <>
-            <div className={`text-2xl font-bold ${vote.choice === "Yes" ? "text-emerald-300" : vote.choice === "No" ? "text-red-300" : "text-zinc-300"}`}>
+            <div
+              className={`text-2xl font-bold ${vote.choice === "Yes" ? "text-emerald-300" : vote.choice === "No" ? "text-red-300" : "text-zinc-300"}`}
+            >
               {vote.choice}
             </div>
             <div className="text-sm text-muted-foreground italic">"{vote.reasoning}"</div>
@@ -46,7 +56,9 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
             </div>
           </>
         ) : (
-          <div className="text-sm text-muted-foreground">This proposal is no longer accepting votes.</div>
+          <div className="text-sm text-muted-foreground">
+            This proposal is no longer accepting votes.
+          </div>
         )}
       </div>
     );
@@ -60,14 +72,18 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
         </div>
       )}
       <div>
-        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Your vote</div>
+        <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+          Your vote
+        </div>
         <div className="grid grid-cols-3 gap-2">
           {choices.map((item) => (
             <button
               key={item.v}
               onClick={() => setChoice(item.v)}
               className={`py-3 rounded-xl border text-sm font-semibold transition-all ${item.color} ${
-                choice === item.v ? `${item.ring} shadow-[0_0_25px_-5px]` : "border-white/10 hover:border-white/30"
+                choice === item.v
+                  ? `${item.ring} shadow-[0_0_25px_-5px]`
+                  : "border-white/10 hover:border-white/30"
               }`}
             >
               {item.v}
@@ -79,7 +95,9 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
       <div>
         <div className="flex justify-between items-center mb-2">
           <div className="text-xs uppercase tracking-widest text-muted-foreground">Reasoning</div>
-          <div className="text-[11px] font-mono text-muted-foreground">{reasoning.length} chars</div>
+          <div className="text-[11px] font-mono text-muted-foreground">
+            {reasoning.length} chars
+          </div>
         </div>
         <textarea
           value={reasoning}
@@ -90,7 +108,10 @@ export function VotePanel({ proposal }: { proposal: Proposal }) {
       </div>
 
       {!wallet ? (
-        <button onClick={() => void connect()} className="w-full py-3 rounded-xl bg-primary-gradient font-semibold shadow-glow">
+        <button
+          onClick={() => void connect()}
+          className="w-full py-3 rounded-xl bg-primary-gradient font-semibold shadow-glow"
+        >
           Connect Wallet to Vote
         </button>
       ) : (

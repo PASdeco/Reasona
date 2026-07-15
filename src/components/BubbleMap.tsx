@@ -231,16 +231,16 @@ export function BubbleMap({ clusters, height = 480 }: { clusters: Cluster[]; hei
               x
             </button>
           </div>
-          <ul className="space-y-2 text-xs">
-            {selected.entries.slice(0, 12).map((entry, index) => (
-              <li key={index} className="border border-white/5 rounded-md p-2 bg-white/[0.02]">
-                <div className="font-mono text-violet-300 mb-1">
-                  {entry.address.slice(0, 8)}...{entry.address.slice(-4)}
-                </div>
-                <div className="text-muted-foreground">{entry.reasoning}</div>
-              </li>
-            ))}
-          </ul>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="border border-white/5 rounded-md p-3 bg-white/[0.02]">
+              <div className="text-muted-foreground mb-1">Members</div>
+              <div className="text-lg font-semibold">{selected.members}</div>
+            </div>
+            <div className="border border-white/5 rounded-md p-3 bg-white/[0.02]">
+              <div className="text-muted-foreground mb-1">Confidence</div>
+              <div className="text-lg font-semibold">{selected.confidence ?? 0}%</div>
+            </div>
+          </div>
         </div>
       )}
     </div>

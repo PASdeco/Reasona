@@ -5,7 +5,10 @@ export function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
-    const stored = (typeof window !== "undefined" && localStorage.getItem("theme")) as "dark" | "light" | null;
+    const stored = (typeof window !== "undefined" && localStorage.getItem("theme")) as
+      | "dark"
+      | "light"
+      | null;
     const t = stored ?? "dark";
     setTheme(t);
     document.documentElement.classList.toggle("light", t === "light");

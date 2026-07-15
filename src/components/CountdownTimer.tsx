@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 
-export function CountdownTimer({ deadline, compact = false }: { deadline: number; compact?: boolean }) {
+export function CountdownTimer({
+  deadline,
+  compact = false,
+}: {
+  deadline: number;
+  compact?: boolean;
+}) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     setNow(Date.now());
@@ -13,10 +19,16 @@ export function CountdownTimer({ deadline, compact = false }: { deadline: number
   const m = Math.floor((diff % 3_600_000) / 60_000);
   const s = Math.floor((diff % 60_000) / 1000);
   if (diff === 0) return <span className="text-muted-foreground">Voting closed</span>;
-  if (compact) return <span className="font-mono text-xs">{h}h {m}m left</span>;
+  if (compact)
+    return (
+      <span className="font-mono text-xs">
+        {h}h {m}m left
+      </span>
+    );
   return (
     <span className="font-mono text-sm tracking-wider">
-      {h.toString().padStart(2, "0")}h {m.toString().padStart(2, "0")}m {s.toString().padStart(2, "0")}s
+      {h.toString().padStart(2, "0")}h {m.toString().padStart(2, "0")}m{" "}
+      {s.toString().padStart(2, "0")}s
     </span>
   );
 }
