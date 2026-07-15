@@ -1,5 +1,3 @@
-export const OWNER_ADDRESS = "0xD0b8aEEdf195499773415323cae517e5b8369F94" as const;
-
 export type ProposalStatus = "ACTIVE" | "CLOSED" | "ARCHIVED";
 export type Category =
   | "Governance"
@@ -10,17 +8,12 @@ export type Category =
   | "Protocol Upgrade";
 export type VoteChoice = "Yes" | "No" | "Abstain";
 
-export interface ClusterMember {
-  address: string;
-  reasoning: string;
-}
-
 export interface Cluster {
   id: string;
   label: string;
   side: "for" | "against" | "neutral";
   members: number;
-  entries: ClusterMember[];
+  confidence?: number;
 }
 
 export interface Proposal {

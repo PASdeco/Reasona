@@ -19,7 +19,6 @@ import {
   getWhitelist,
   HAS_CONTRACT_ADDRESS,
   isWhitelisted,
-  OWNER_ADDRESS,
   removeCreator,
   submitVote as submitVoteOnChain,
   unarchiveProposal as unarchiveProposalOnChain,
@@ -43,6 +42,7 @@ interface AppState {
   disconnect: () => void;
   proposals: Proposal[];
   whitelist: string[];
+  owner: string;
   addWhitelist: (address: string) => Promise<void>;
   removeWhitelist: (address: string) => Promise<void>;
   createProposal: (proposal: {
@@ -124,7 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [whitelist, setWhitelist] = useState<string[]>([]);
-  const [owner, setOwner] = useState(OWNER_ADDRESS.toLowerCase());
+  const [owner, setOwner] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +139,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!HAS_CONTRACT_ADDRESS) {
       setProposals([]);
       setWhitelist([]);
-      setOwner(OWNER_ADDRESS.toLowerCase());
+      setOwner("");
       setError(
         "Set VITE_REASONA_CONTRACT_ADDRESS to your deployed Reasona contract to enable live data.",
       );
@@ -471,6 +471,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       disconnect,
       proposals,
       whitelist,
+      owner,
       addWhitelist,
       removeWhitelist,
       createProposal,
@@ -498,6 +499,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       disconnect,
       proposals,
       whitelist,
+      owner,
       addWhitelist,
       removeWhitelist,
       createProposal,

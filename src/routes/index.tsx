@@ -9,7 +9,8 @@ export const Route = createFileRoute("/")({
       { title: "Reasona - Governance Powered by Collective Intelligence" },
       {
         name: "description",
-        content: "Structured proposals, reasoning-backed voting, and contract-backed governance on GenLayer.",
+        content:
+          "Structured proposals, reasoning-backed voting, and contract-backed governance on GenLayer.",
       },
     ],
   }),
@@ -33,7 +34,8 @@ function Landing() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-28 text-center">
         {!contractReady && (
           <div className="mx-auto mb-8 max-w-3xl rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-100">
-            Deploy <code>contracts/reasona.py</code> and set <code>VITE_REASONA_CONTRACT_ADDRESS</code> to activate the live Reasona contract.
+            Deploy <code>contracts/reasona.py</code> and set{" "}
+            <code>VITE_REASONA_CONTRACT_ADDRESS</code> to activate the live Reasona contract.
           </div>
         )}
         {error && contractReady && (
@@ -58,7 +60,8 @@ function Landing() {
           transition={{ delay: 0.3 }}
           className="mt-6 max-w-2xl mx-auto text-muted-foreground text-lg"
         >
-          Reasona turns governance into structured intelligence. Every vote carries reasoning, and every proposal lives on GenLayer with owner-controlled creator whitelisting.
+          Reasona turns governance into structured intelligence. Every vote carries reasoning, and
+          every proposal lives on GenLayer with owner-controlled creator whitelisting.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -75,7 +78,10 @@ function Landing() {
           >
             {"Launch App ->"}
           </Link>
-          <Link to="/explore" className="px-6 py-3 rounded-xl border border-white/15 hover:border-white/30 font-medium">
+          <Link
+            to="/explore"
+            className="px-6 py-3 rounded-xl border border-white/15 hover:border-white/30 font-medium"
+          >
             Explore Proposals
           </Link>
         </motion.div>
@@ -84,7 +90,9 @@ function Landing() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-28">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold">How It Works</h2>
-          <p className="text-muted-foreground mt-2">Three steps from proposal to transparent reasoning-backed governance.</p>
+          <p className="text-muted-foreground mt-2">
+            Three steps from proposal to transparent reasoning-backed governance.
+          </p>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
           {[
@@ -136,7 +144,10 @@ function Landing() {
               d: "Vote totals, cluster strength, and confidence signals stay visible for every proposal.",
             },
           ].map((feature) => (
-            <div key={feature.t} className="glass rounded-2xl p-6 hover:border-primary/30 transition-colors">
+            <div
+              key={feature.t}
+              className="glass rounded-2xl p-6 hover:border-primary/30 transition-colors"
+            >
               <div className="text-lg font-semibold mb-2">{feature.t}</div>
               <div className="text-sm text-muted-foreground">{feature.d}</div>
             </div>

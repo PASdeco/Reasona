@@ -3,7 +3,6 @@ import { studionet } from "genlayer-js/chains";
 import { TransactionStatus } from "genlayer-js/types";
 import { requestAccounts, type InjectedWalletProvider } from "./wallets";
 import {
-  OWNER_ADDRESS,
   type Category,
   type Cluster,
   type Proposal,
@@ -236,10 +235,7 @@ function parseCluster(raw: Record<string, unknown>): Cluster {
     label: String(raw.label ?? ""),
     side: (raw.side as Cluster["side"]) ?? "neutral",
     members: Number(raw.members ?? 0),
-    entries: ((raw.entries as Record<string, unknown>[]) ?? []).map((entry) => ({
-      address: String(entry.address ?? ""),
-      reasoning: String(entry.reasoning ?? ""),
-    })),
+    confidence: Number(raw.confidence ?? 0),
   };
 }
 
@@ -564,5 +560,3 @@ export async function removeCreator(
 ) {
   await write(caller, "remove_creator", [address], provider);
 }
-
-export { OWNER_ADDRESS };

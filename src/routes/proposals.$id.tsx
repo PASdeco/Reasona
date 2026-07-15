@@ -58,10 +58,12 @@ function ProposalDetail() {
         <p className="text-muted-foreground mt-4 max-w-3xl">{proposal.description}</p>
         <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
           <div>
-            Creator: <span className="font-mono text-foreground">{shortAddr(proposal.creator)}</span>
+            Creator:{" "}
+            <span className="font-mono text-foreground">{shortAddr(proposal.creator)}</span>
           </div>
           <div>
-            Created: <span className="text-foreground">{new Date(proposal.createdAt).toLocaleString()}</span>
+            Created:{" "}
+            <span className="text-foreground">{new Date(proposal.createdAt).toLocaleString()}</span>
           </div>
           {proposal.status === "ACTIVE" && (
             <div>
@@ -86,7 +88,9 @@ function ProposalDetail() {
         <div className="order-1 lg:order-2 space-y-6 min-w-0">
           <VotePanel proposal={proposal} />
           <div className="glass rounded-2xl p-6">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">Vote Statistics</div>
+            <div className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
+              Vote Statistics
+            </div>
             <div className="text-3xl font-bold mb-1">{total}</div>
             <div className="text-xs text-muted-foreground mb-5">Total votes cast</div>
             <div className="h-2.5 rounded-full overflow-hidden bg-white/5 flex mb-4">
@@ -106,7 +110,17 @@ function ProposalDetail() {
   );
 }
 
-function Row({ color, label, count, pct }: { color: string; label: string; count: number; pct: string }) {
+function Row({
+  color,
+  label,
+  count,
+  pct,
+}: {
+  color: string;
+  label: string;
+  count: number;
+  pct: string;
+}) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">

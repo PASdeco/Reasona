@@ -1,5 +1,8 @@
 export interface InjectedWalletProvider {
-  request: (args: { method: string; params?: unknown[] | Record<string, unknown> }) => Promise<unknown>;
+  request: (args: {
+    method: string;
+    params?: unknown[] | Record<string, unknown>;
+  }) => Promise<unknown>;
   on?: (event: string, listener: (...args: unknown[]) => void) => void;
   removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
   isMetaMask?: boolean;
@@ -38,11 +41,21 @@ function inferredWalletName(provider: InjectedWalletProvider) {
   return "Injected Wallet";
 }
 
-function walletIdFrom(provider: InjectedWalletProvider, fallbackIndex: number, detail?: Eip6963ProviderDetail) {
+function walletIdFrom(
+  provider: InjectedWalletProvider,
+  fallbackIndex: number,
+  detail?: Eip6963ProviderDetail,
+) {
   return (
     detail?.info?.uuid ||
     detail?.info?.rdns ||
-    (provider.isRabby ? "rabby" : provider.isZerion ? "zerion" : provider.isMetaMask ? "metamask" : `wallet-${fallbackIndex}`)
+    (provider.isRabby
+      ? "rabby"
+      : provider.isZerion
+        ? "zerion"
+        : provider.isMetaMask
+          ? "metamask"
+          : `wallet-${fallbackIndex}`)
   );
 }
 
@@ -50,7 +63,10 @@ export async function discoverInjectedWallets(timeoutMs = 250): Promise<WalletOp
   if (typeof window === "undefined") return [];
 
   const found = new Map<string, WalletOption>();
-  const pushProvider = (provider: InjectedWalletProvider | undefined, detail?: Eip6963ProviderDetail) => {
+  const pushProvider = (
+    provider: InjectedWalletProvider | undefined,
+    detail?: Eip6963ProviderDetail,
+  ) => {
     if (!provider) return;
     const id = walletIdFrom(provider, found.size, detail);
     if (found.has(id)) return;
@@ -72,7 +88,9 @@ export async function discoverInjectedWallets(timeoutMs = 250): Promise<WalletOp
 
   if (window.ethereum) {
     pushProvider(window.ethereum);
-    const injectedProviders = Array.isArray(window.ethereum.providers) ? window.ethereum.providers : [];
+    const injectedProviders = Array.isArray(window.ethereum.providers)
+      ? window.ethereum.providers
+      : [];
     injectedProviders.forEach((provider) => pushProvider(provider));
   }
 
@@ -81,9 +99,14 @@ export async function discoverInjectedWallets(timeoutMs = 250): Promise<WalletOp
   return [...found.values()];
 }
 
-export async function requestAccounts(provider: InjectedWalletProvider, method: "eth_requestAccounts" | "eth_accounts") {
+export async function requestAccounts(
+  provider: InjectedWalletProvider,
+  method: "eth_requestAccounts" | "eth_accounts",
+) {
   const result = await provider.request({ method });
   const accounts = Array.isArray(result) ? result : [];
-  const account = accounts.find((value): value is string => typeof value === "string" && value.startsWith("0x"));
+  const account = accounts.find(
+    (value): value is string => typeof value === "string" && value.startsWith("0x"),
+  );
   return account ?? null;
 }

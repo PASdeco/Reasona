@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useApp } from "@/store/app";
-import { OWNER_ADDRESS, shortAddr, type Category } from "@/lib/reasona";
+import { shortAddr, type Category } from "@/lib/reasona";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin - Reasona" }] }),
@@ -33,6 +33,7 @@ function Admin() {
     archiveProposal,
     unarchiveProposal,
     whitelist,
+    owner,
     addWhitelist,
     removeWhitelist,
     error,
@@ -336,7 +337,7 @@ function Admin() {
           </div>
           <ul className="space-y-2">
             {whitelist.map((address) => {
-              const isOwnerAddress = address.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+              const isOwnerAddress = address.toLowerCase() === owner.toLowerCase();
               return (
                 <li
                   key={address}
