@@ -4,7 +4,6 @@ import json
 import re
 from typing import Any
 
-OWNER_ADDRESS = "0xD0b8aEEdf195499773415323cae517e5b8369F94"
 WINDOW_MS = 48 * 60 * 60 * 1000
 MAX_REASONING_CHARS = 2_000
 MAX_CONTEXT_CHARS = 12_000
@@ -14,13 +13,13 @@ class Reasona(gl.Contract):
     proposals: TreeMap[str, str]
     proposal_ids: DynArray[str]
     votes: TreeMap[str, str]
-    proposal_voters: TreeMap[str, str]
+    proposal_clusters: TreeMap[str, str]
     whitelist: TreeMap[str, str]
     owner: str
     next_id: str
 
     def __init__(self) -> None:
-        self.owner = OWNER_ADDRESS
+        self.owner = str(gl.message.sender_address)
         self.whitelist[self.owner.lower()] = "1"
         self.next_id = "1"
 
@@ -43,7 +42,34 @@ class Reasona(gl.Contract):
 
     def _save_proposal(self, proposal_id: str, proposal: dict) -> None:
         proposal_id = self._proposal_key(proposal_id)
-        self.proposals[proposal_id] = json.dumps(proposal, ensure_ascii=False, separators=(",", ":"))
+        stored = dict(proposal)
+        if "clusters" in stored:
+            del stored["clusters"]
+        stored["cluster_count"] = int(stored.get("cluster_count", 0))
+        self.proposals[proposal_id] = json.dumps(stored, ensure_ascii=False, separators=(",", ":"))
+
+    def _vote_key(self, proposal_id: Any, voter: Any) -> str:
+        return f"{self._proposal_key(proposal_id)}:{self._normalize(voter)}"
+
+    def _cluster_key(self, proposal_id: Any, cluster_id: Any) -> str:
+        return f"{self._proposal_key(proposal_id)}:{str(cluster_id).strip()}"
+
+    def _save_cluster(self, proposal_id: str, cluster_id: str, cluster: dict) -> None:
+        self.proposal_clusters[self._cluster_key(proposal_id, cluster_id)] = json.dumps(
+            cluster,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+
+    def _load_clusters(self, proposal: dict) -> list:
+        proposal_id = self._proposal_key(proposal.get("id", ""))
+        count = int(proposal.get("cluster_count", 0))
+        result = []
+        for i in range(1, count + 1):
+            key = self._cluster_key(proposal_id, str(i))
+            if key in self.proposal_clusters:
+                result.append(json.loads(self.proposal_clusters[key]))
+        return result
 
     def _sanitize_text(self, value: str, limit: int) -> str:
         collapsed = re.sub(r"\s+", " ", value.replace("\r", " ")).strip()
@@ -60,31 +86,16 @@ class Reasona(gl.Contract):
             return "oppose"
         return "abstain"
 
-    def _load_votes(self, proposal_id: str) -> list:
-        proposal_id = self._proposal_key(proposal_id)
-        voters = self.proposal_voters[proposal_id] if proposal_id in self.proposal_voters else ""
-        if not voters:
-            return []
-        result = []
-        for voter in voters.split(","):
-            voter = voter.strip()
-            if not voter:
-                continue
-            key = f"{proposal_id}:{voter}"
-            if key in self.votes:
-                result.append(json.loads(self.votes[key]))
-        return result
-
     def _candidate_clusters(self, proposal: dict, stance: str) -> list:
         candidates = []
-        for cluster in proposal.get("clusters", []):
+        for cluster in self._load_clusters(proposal):
             if cluster.get("side") == stance:
                 candidates.append(
                     {
                         "id": cluster.get("id", ""),
                         "label": cluster.get("label", ""),
-                        "summary": cluster.get("summary", ""),
                         "members": int(cluster.get("members", 0)),
+                        "confidence": int(cluster.get("confidence", 60)),
                     }
                 )
         return candidates
@@ -408,15 +419,14 @@ Return true only if:
     def _synthesize_proposal_overview(self, proposal: dict) -> dict:
         source_summary = self._proposal_source_summary(proposal)
         clusters = []
-        for cluster in proposal.get("clusters", []):
+        for cluster in self._load_clusters(proposal):
             clusters.append(
                 {
                     "id": cluster.get("id", ""),
                     "label": cluster.get("label", ""),
                     "side": cluster.get("side", ""),
                     "members": int(cluster.get("members", 0)),
-                    "summary": cluster.get("summary", ""),
-                    "top_quotes": cluster.get("top_quotes", []),
+                    "confidence": int(cluster.get("confidence", 60)),
                 }
             )
 
@@ -432,7 +442,7 @@ Return strict JSON with:
 - recommended_focus: one short sentence about what delegates should inspect next
 
 Requirements:
-- Use only proposal metadata, source summary, and cluster summaries supplied.
+- Use only proposal metadata, source summary, cluster labels, and aggregate counts supplied.
 - Reflect the strongest visible arguments, not just vote totals.
 - If one side has no clusters yet, say so briefly instead of inventing one.
 """
@@ -548,63 +558,35 @@ Return true only if:
     def _refresh_overview(self, proposal: dict) -> None:
         proposal["overview"] = self._synthesize_proposal_overview(proposal)
 
-    def _apply_vote_analysis(self, proposal: dict, voter: str, vote_obj: dict, analysis: dict) -> None:
-        clusters = proposal.get("clusters", [])
+    def _apply_vote_analysis(self, proposal: dict, analysis: dict) -> None:
+        clusters = self._load_clusters(proposal)
         cluster_id = str(analysis.get("matching_cluster_id", "")).strip()
-        chosen_index = -1
+        chosen_cluster = {}
 
         if not bool(analysis.get("new_cluster", True)) and cluster_id:
-            for i, cluster in enumerate(clusters):
+            for cluster in clusters:
                 if str(cluster.get("id", "")) == cluster_id:
-                    chosen_index = i
+                    chosen_cluster = cluster
                     break
 
-        if chosen_index < 0:
-            cluster_number = len(clusters) + 1
-            cluster_id = f"{analysis.get('stance', 'neutral')}-{cluster_number}"
-            clusters.append(
-                {
-                    "id": cluster_id,
-                    "label": analysis.get("cluster_label", ""),
-                    "side": analysis.get("stance", "neutral"),
-                    "theme": analysis.get("theme", ""),
-                    "summary": analysis.get("cluster_summary", ""),
-                    "members": 0,
-                    "confidence": int(analysis.get("confidence", 60)),
-                    "entries": [],
-                    "top_quotes": [],
-                    "evidence_used": analysis.get("evidence_used", []),
-                }
-            )
-            chosen_index = len(clusters) - 1
+        if not chosen_cluster:
+            cluster_number = int(proposal.get("cluster_count", 0)) + 1
+            cluster_id = str(cluster_number)
+            chosen_cluster = {
+                "id": cluster_id,
+                "label": analysis.get("cluster_label", ""),
+                "side": analysis.get("stance", "neutral"),
+                "members": 0,
+                "confidence": int(analysis.get("confidence", 60)),
+            }
+            proposal["cluster_count"] = cluster_number
 
-        cluster = clusters[chosen_index]
-        cluster["label"] = analysis.get("cluster_label", cluster.get("label", ""))
-        cluster["side"] = analysis.get("stance", cluster.get("side", "neutral"))
-        cluster["theme"] = analysis.get("theme", cluster.get("theme", ""))
-        cluster["summary"] = analysis.get("cluster_summary", cluster.get("summary", ""))
-        cluster["confidence"] = int(analysis.get("confidence", cluster.get("confidence", 60)))
-        cluster["evidence_used"] = analysis.get("evidence_used", cluster.get("evidence_used", []))
+        chosen_cluster["label"] = analysis.get("cluster_label", chosen_cluster.get("label", ""))
+        chosen_cluster["side"] = analysis.get("stance", chosen_cluster.get("side", "neutral"))
+        chosen_cluster["members"] = int(chosen_cluster.get("members", 0)) + 1
+        chosen_cluster["confidence"] = int(analysis.get("confidence", chosen_cluster.get("confidence", 60)))
 
-        entries = cluster.get("entries", [])
-        entry = {
-            "address": voter,
-            "reasoning": vote_obj["reasoning"],
-            "summary": analysis.get("rationale_summary", ""),
-            "evidence_used": analysis.get("evidence_used", []),
-        }
-        entries.append(entry)
-        cluster["entries"] = entries
-        cluster["members"] = len(entries)
-
-        quotes = cluster.get("top_quotes", [])
-        if len(quotes) < 3 and len(vote_obj["reasoning"]) > 0:
-            quote = vote_obj["reasoning"][:160]
-            if quote not in quotes:
-                quotes.append(quote)
-        cluster["top_quotes"] = quotes[:3]
-
-        proposal["clusters"] = clusters
+        self._save_cluster(str(proposal.get("id", "")), cluster_id, chosen_cluster)
 
     def _update_vote_counts(self, proposal: dict, vote: str) -> None:
         if vote == "yes":
@@ -633,6 +615,7 @@ Return true only if:
         proposal_id = self._proposal_key(proposal_id)
         proposal = self._load_proposal(proposal_id)
         self._update_status(proposal)
+        proposal["clusters"] = self._load_clusters(proposal)
         return proposal
 
     @gl.public.view
@@ -677,14 +660,28 @@ Return true only if:
         return self._visible_proposal(proposal_id)
 
     @gl.public.view
-    def get_votes(self, proposal_id: str) -> list:
-        proposal_id = self._proposal_key(proposal_id)
-        return self._load_votes(proposal_id)
+    def has_voted(self, proposal_id: str, voter: str) -> bool:
+        return self._vote_key(proposal_id, voter) in self.votes
+
+    @gl.public.view
+    def get_vote(self, proposal_id: str, voter: str) -> dict:
+        key = self._vote_key(proposal_id, voter)
+        if key not in self.votes:
+            return {}
+        return json.loads(self.votes[key])
+
+    @gl.public.view
+    def get_votes(self, proposal_id: str, voters: list) -> list:
+        result = []
+        for voter in voters:
+            key = self._vote_key(proposal_id, voter)
+            if key in self.votes:
+                result.append(json.loads(self.votes[key]))
+        return result
 
     @gl.public.view
     def get_my_vote(self, proposal_id: str, voter: str) -> dict:
-        proposal_id = self._proposal_key(proposal_id)
-        key = f"{proposal_id}:{self._normalize(voter)}"
+        key = self._vote_key(proposal_id, voter)
         if key not in self.votes:
             return {}
         return json.loads(self.votes[key])
@@ -694,7 +691,7 @@ Return true only if:
         voter_lower = self._normalize(voter)
         result = []
         for proposal_id in self.proposal_ids:
-            key = f"{proposal_id}:{voter_lower}"
+            key = self._vote_key(proposal_id, voter_lower)
             if key in self.votes:
                 result.append(
                     {
@@ -731,7 +728,7 @@ Return true only if:
             "yes": 0,
             "no": 0,
             "abstain": 0,
-            "clusters": [],
+            "cluster_count": 0,
             "source": source_summary,
             "overview": self._default_overview(
                 {
@@ -747,7 +744,6 @@ Return true only if:
 
         self._save_proposal(pid, proposal)
         self.proposal_ids.append(pid)
-        self.proposal_voters[pid] = ""
         self.next_id = str(int(self.next_id) + 1)
 
     @gl.public.write
@@ -760,9 +756,8 @@ Return true only if:
         proposal = self._visible_proposal(proposal_id)
         assert proposal["status"] == "active", "Proposal not active"
 
-        voters = self.proposal_voters[proposal_id] if proposal_id in self.proposal_voters else ""
-        existing = [v.strip() for v in voters.split(",") if v.strip()]
-        assert caller not in existing, "Already voted"
+        vote_key = self._vote_key(proposal_id, caller)
+        assert vote_key not in self.votes, "Already voted"
 
         reasoning_clean = self._sanitize_text(reasoning, MAX_REASONING_CHARS)
         assert len(reasoning_clean) > 0, "Reasoning required"
@@ -776,13 +771,10 @@ Return true only if:
             "submitted_at": now,
             "analysis": analysis,
         }
-        self.votes[f"{proposal_id}:{caller}"] = json.dumps(vote_obj, ensure_ascii=False, separators=(",", ":"))
-
-        existing.append(caller)
-        self.proposal_voters[proposal_id] = ",".join(existing)
+        self.votes[vote_key] = json.dumps(vote_obj, ensure_ascii=False, separators=(",", ":"))
 
         self._update_vote_counts(proposal, vote)
-        self._apply_vote_analysis(proposal, caller, vote_obj, analysis)
+        self._apply_vote_analysis(proposal, analysis)
         self._update_status(proposal)
         self._refresh_overview(proposal)
         self._save_proposal(proposal_id, proposal)
@@ -838,25 +830,6 @@ Return true only if:
             str(proposal.get("title", "")),
             str(proposal.get("description", "")),
         )
-        proposal["clusters"] = []
-        proposal["yes"] = 0
-        proposal["no"] = 0
-        proposal["abstain"] = 0
-
-        votes = self._load_votes(proposal_id)
-        for vote_obj in votes:
-            vote = str(vote_obj.get("vote", "abstain"))
-            analysis = self._analyze_vote_reasoning(proposal, vote, str(vote_obj.get("reasoning", "")))
-            vote_obj["analysis"] = analysis
-            self._update_vote_counts(proposal, vote)
-            self._apply_vote_analysis(proposal, str(vote_obj.get("voter", "")), vote_obj, analysis)
-            voter = self._normalize(str(vote_obj.get("voter", "")))
-            self.votes[f"{proposal_id}:{voter}"] = json.dumps(
-                vote_obj,
-                ensure_ascii=False,
-                separators=(",", ":"),
-            )
-
         self._update_status(proposal)
         self._refresh_overview(proposal)
         self._save_proposal(proposal_id, proposal)
